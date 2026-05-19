@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(claude mcp *)",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\('/home/adolf/.claude.json'\\)\\); print\\(json.dumps\\(d.get\\('mcpServers', {}\\), indent=2\\)\\)\")"
+    ]
+  }
+}
