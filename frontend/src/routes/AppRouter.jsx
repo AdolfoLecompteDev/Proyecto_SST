@@ -13,6 +13,9 @@ import MisCertificados from '../pages/certificados/MisCertificados.jsx'
 import ReporteSeguimiento from '../pages/seguimiento/ReporteSeguimiento.jsx'
 import HistorialConsultas from '../pages/consultas/HistorialConsultas.jsx'
 import ConsultaAntecedentesMiembros from '../pages/consultas/ConsultaAntecedentesMiembros.jsx'
+import Notificaciones from '../pages/notificaciones/Notificaciones.jsx'
+import PerfilUsuario from '../pages/perfil/PerfilUsuario.jsx'
+import Configuracion from '../pages/configuracion/Configuracion.jsx'
 import ProtectedRoute from './ProtectedRoute.jsx'
 import { ROLES, ROUTES } from '../utils/constants.js'
 
@@ -48,6 +51,9 @@ export default function AppRouter() {
             path={ROUTES.CONSULTAS_ANTECEDENTES}
             element={<ConsultaAntecedentesMiembros />}
           />
+          <Route path={ROUTES.NOTIFICACIONES} element={<Notificaciones />} />
+          <Route path={ROUTES.PERFIL} element={<PerfilUsuario />} />
+          <Route path={ROUTES.CONFIGURACION} element={<Configuracion />} />
         </Route>
 
         <Route path="*" element={<Navigate to={ROUTES.DASHBOARD} replace />} />
