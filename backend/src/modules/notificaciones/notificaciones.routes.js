@@ -1,11 +1,10 @@
 import { Router } from 'express'
 import auth from '../../middlewares/auth.middleware.js'
-import { reporte, refresh } from './seguimiento.controller.js'
+import { list } from './notificaciones.controller.js'
 
 const router = Router()
 
 router.use(auth)
-router.get('/', reporte)
-router.post('/refresh', refresh)
+router.get('/', list)
 
 export default router

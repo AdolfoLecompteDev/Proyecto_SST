@@ -43,6 +43,7 @@ export default function AppRouter() {
           />
           <Route path="/capacitaciones/:id" element={<DetalleCapacitacion />} />
           <Route path={ROUTES.EVALUACIONES} element={<FormEvaluacion />} />
+          <Route path="/evaluaciones/:id/preguntas" element={<FormEvaluacion />} />
           <Route path="/evaluaciones/resultado" element={<ResultadoEvaluacion />} />
           <Route path={ROUTES.CERTIFICADOS} element={<MisCertificados />} />
           <Route path={ROUTES.SEGUIMIENTO} element={<ReporteSeguimiento />} />

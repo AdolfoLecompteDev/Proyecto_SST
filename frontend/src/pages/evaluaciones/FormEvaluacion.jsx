@@ -1,51 +1,57 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useCallback } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import PageWrapper from '../../components/layout/PageWrapper.jsx'
 import { ClockIcon, CheckCircleIcon } from '../../components/ui/Icons.jsx'
+import { fetchPreguntas, submitEvaluacion } from '../../api/evaluacionesApi.js'
 
-const preguntas = [
-  {
-    id: 1,
-    texto: '¿Cuál es la altura mínima a partir de la cual se considera "trabajo en alturas" según la normativa colombiana?',
-    opciones: ['1.0 metros', '1.5 metros', '1.8 metros', '2.0 metros'],
-    correcta: 1,
-  },
-  {
-    id: 2,
-    texto: '¿Con qué frecuencia mínima se debe realizar la inspección del arnés de seguridad?',
-    opciones: ['Mensualmente', 'Antes de cada uso', 'Cada semestre', 'Anualmente'],
-    correcta: 1,
-  },
-  {
-    id: 3,
-    texto: '¿Qué elemento NO hace parte de un sistema de detención de caídas?',
-    opciones: ['Arnés de cuerpo completo', 'Conector o eslinga', 'Casco de protección', 'Punto de anclaje'],
-    correcta: 2,
-  },
-  {
-    id: 4,
-    texto: 'Según la Resolución 4272 de 2021, ¿quién puede autorizar el trabajo en alturas?',
-    opciones: ['Cualquier supervisor', 'El coordinador de trabajo en alturas certificado', 'El trabajador mismo si tiene más de 2 años de experiencia', 'El jefe de área'],
-    correcta: 1,
-  },
-  {
-    id: 5,
-    texto: '¿Cuál es el puntaje mínimo para aprobar esta evaluación?',
-    opciones: ['60%', '65%', '70%', '80%'],
-    correcta: 2,
-  },
-]
-
-const TIEMPO_LIMITE = 10 * 60 // 10 minutos en segundos
+const TIEMPO_LIMITE = 10 * 60
 
 export default function FormEvaluacion() {
   const navigate = useNavigate()
+  const { id } = useParams()
+
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [respuestas, setRespuestas] = useState({})
   const [enviado, setEnviado] = useState(false)
   const [segundos, setSegundos] = useState(TIEMPO_LIMITE)
 
   useEffect(() => {
-    if (enviado) return
+    const load = async () => {
+      try {
+        const res = await fetchPreguntas(id)
+        setData(res.data.data)
+      } catch (err) {
+        setError(err?.response?.data?.message || 'No se pudo cargar la evaluación')
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [id])
+
+  const handleEnviar = useCallback(async (timeout = false) => {
+    if (enviado || !data) return
+    setEnviado(true)
+
+    const respuestasArray = data.preguntas.map((p) => ({
+      pregunta_id: p.id,
+      opcion_id: respuestas[p.id] ?? null,
+    })).filter((r) => r.opcion_id !== null)
+
+    try {
+      const res = await submitEvaluacion(id, respuestasArray)
+      const { puntaje, aprobado, correctas, total, certificado } = res.data.data
+      navigate('/evaluaciones/resultado', { state: { puntaje, aprobado, correctas, total, timeout, certificado } })
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'Error al enviar la evaluación'
+      navigate('/evaluaciones/resultado', { state: { puntaje: 0, aprobado: false, correctas: 0, total: data.preguntas.length, timeout, error: msg } })
+    }
+  }, [enviado, data, respuestas, id, navigate])
+
+  useEffect(() => {
+    if (enviado || loading) return
     const interval = setInterval(() => {
       setSegundos((s) => {
         if (s <= 1) { clearInterval(interval); handleEnviar(true); return 0 }
@@ -53,33 +59,45 @@ export default function FormEvaluacion() {
       })
     }, 1000)
     return () => clearInterval(interval)
-  }, [enviado])
+  }, [enviado, loading, handleEnviar])
 
   const minutos = Math.floor(segundos / 60)
   const segs = String(segundos % 60).padStart(2, '0')
   const timerRojo = segundos < 120
 
-  const seleccionar = (pregId, opIdx) => {
+  const seleccionar = (pregId, opcionId) => {
     if (enviado) return
-    setRespuestas((prev) => ({ ...prev, [pregId]: opIdx }))
+    setRespuestas((prev) => ({ ...prev, [pregId]: opcionId }))
   }
 
-  const handleEnviar = (timeout = false) => {
-    if (enviado) return
-    setEnviado(true)
-    const correctas = preguntas.filter((p) => respuestas[p.id] === p.correcta).length
-    const puntaje = Math.round((correctas / preguntas.length) * 100)
-    const aprobado = puntaje >= 70
-    navigate('/evaluaciones/resultado', { state: { puntaje, aprobado, correctas, total: preguntas.length, timeout } })
+  if (loading) {
+    return (
+      <PageWrapper title="Cargando evaluación..." subtitle="">
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-40 animate-pulse rounded-xl bg-surface-container-high" />
+          ))}
+        </div>
+      </PageWrapper>
+    )
   }
 
+  if (error || !data) {
+    return (
+      <PageWrapper title="Error" subtitle="">
+        <div className="rounded-xl bg-error-container p-6 text-body-sm text-error">{error}</div>
+      </PageWrapper>
+    )
+  }
+
+  const { evaluacion, preguntas } = data
   const respondidas = Object.keys(respuestas).length
   const progreso = Math.round((respondidas / preguntas.length) * 100)
 
   return (
     <PageWrapper
-      title="Evaluación: Trabajo en Alturas"
-      subtitle="Responde todas las preguntas. Puntaje mínimo para aprobar: 70%"
+      title={`Evaluación: ${evaluacion.titulo}`}
+      subtitle={`Puntaje mínimo para aprobar: ${evaluacion.puntaje_minimo}%`}
     >
       {/* Header stats */}
       <div className="mb-6 grid grid-cols-3 gap-4">
@@ -113,13 +131,13 @@ export default function FormEvaluacion() {
         {preguntas.map((p, idx) => (
           <div key={p.id} className="rounded-xl border border-outline-variant bg-surface-container-lowest p-5">
             <p className="mb-4 text-body-md font-medium text-on-surface">
-              <span className="mr-2 text-on-surface-variant">{idx + 1}.</span>{p.texto}
+              <span className="mr-2 text-on-surface-variant">{idx + 1}.</span>{p.enunciado}
             </p>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {p.opciones.map((op, opIdx) => {
-                const seleccionada = respuestas[p.id] === opIdx
+              {(p.opciones ?? []).map((op, opIdx) => {
+                const seleccionada = respuestas[p.id] === op.id
                 return (
-                  <button key={opIdx} onClick={() => seleccionar(p.id, opIdx)}
+                  <button key={op.id} onClick={() => seleccionar(p.id, op.id)}
                     className={`rounded-lg border px-4 py-3 text-left text-body-sm transition-colors ${
                       seleccionada
                         ? 'border-primary bg-primary/5 font-medium text-primary'
@@ -130,7 +148,7 @@ export default function FormEvaluacion() {
                     }`}>
                       {String.fromCharCode(65 + opIdx)}
                     </span>
-                    {op}
+                    {op.texto}
                   </button>
                 )
               })}
@@ -146,9 +164,9 @@ export default function FormEvaluacion() {
             ? `Faltan ${preguntas.length - respondidas} pregunta(s) por responder`
             : 'Todas las preguntas respondidas. ¡Listo para enviar!'}
         </p>
-        <button onClick={() => handleEnviar(false)} disabled={respondidas === 0}
+        <button onClick={() => handleEnviar(false)} disabled={respondidas === 0 || enviado}
           className="rounded-lg bg-primary px-6 py-2.5 text-body-sm font-semibold text-on-primary hover:opacity-85 disabled:opacity-40">
-          Enviar evaluación
+          {enviado ? 'Enviando...' : 'Enviar evaluación'}
         </button>
       </div>
     </PageWrapper>

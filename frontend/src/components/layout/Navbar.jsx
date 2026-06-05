@@ -1,13 +1,21 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth.js'
 import { BellIcon, HelpCircleIcon, SettingsIcon, SearchIcon } from '../ui/Icons.jsx'
 import { ROUTES } from '../../utils/constants.js'
-
-const NOTIF_COUNT = 3
+import { fetchNotificaciones } from '../../api/notificacionesApi.js'
 
 export default function Navbar() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const [notifCount, setNotifCount] = useState(0)
+
+  useEffect(() => {
+    if (!user) return
+    fetchNotificaciones()
+      .then((res) => setNotifCount(res.data.data.length))
+      .catch(() => {})
+  }, [user])
 
   const initials = user
     ? user.nombre.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
@@ -35,9 +43,9 @@ export default function Navbar() {
           className="relative flex h-9 w-9 items-center justify-center rounded-lg text-on-surface-variant transition-colors hover:bg-surface-container hover:text-on-surface"
         >
           <BellIcon size={18} />
-          {NOTIF_COUNT > 0 && (
+          {notifCount > 0 && (
             <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-error text-[10px] font-bold text-on-error">
-              {NOTIF_COUNT}
+              {notifCount > 9 ? '9+' : notifCount}
             </span>
           )}
         </button>

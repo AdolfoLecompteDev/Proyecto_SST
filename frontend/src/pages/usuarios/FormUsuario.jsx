@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { XIcon, ChevronDownIcon } from '../../components/ui/Icons.jsx'
+import { createUser, updateUser } from '../../api/usersApi.js'
 
 const ROLES = ['SUPER_USUARIO', 'ADMIN', 'FUNCIONARIO']
 
@@ -16,6 +17,7 @@ export default function FormUsuario({ usuario = null, onClose, onGuardar }) {
     estado: true,
   })
   const [errores, setErrores] = useState({})
+  const [apiError, setApiError] = useState('')
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -53,9 +55,21 @@ export default function FormUsuario({ usuario = null, onClose, onGuardar }) {
     const errs = validar()
     if (Object.keys(errs).length) { setErrores(errs); return }
     setLoading(true)
-    await new Promise((r) => setTimeout(r, 600))
-    onGuardar({ ...form, id: usuario?.id ?? Date.now() })
-    setLoading(false)
+    setApiError('')
+    try {
+      const payload = { ...form }
+      if (esEdicion && !payload.password) delete payload.password
+      if (esEdicion) {
+        await updateUser(usuario.id, payload)
+      } else {
+        await createUser(payload)
+      }
+      onGuardar()
+    } catch (err) {
+      setApiError(err?.response?.data?.message || 'Error al guardar usuario')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -73,6 +87,9 @@ export default function FormUsuario({ usuario = null, onClose, onGuardar }) {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
+          {apiError && (
+            <div className="rounded-lg bg-error-container px-3 py-2 text-body-sm text-error">{apiError}</div>
+          )}
           <div className="grid grid-cols-2 gap-4">
             {[{ name: 'nombre', label: 'Nombre' }, { name: 'apellido', label: 'Apellido' }].map(({ name, label }) => (
               <div key={name}>

@@ -1,8 +1,10 @@
 import { Router } from 'express'
-import { health } from './dashboard.controller.js'
+import auth from '../../middlewares/auth.middleware.js'
+import { stats } from './dashboard.controller.js'
 
 const router = Router()
 
-router.get('/health', health)
+router.use(auth)
+router.get('/', stats)
 
 export default router

@@ -1,3 +1,3 @@
 import axiosInstance from './axiosInstance.js'
 
-export const fetchDashboard = () => axiosInstance.get('/api/dashboard')
+export const fetchDashboardStats = () => axiosInstance.get('/api/dashboard')
