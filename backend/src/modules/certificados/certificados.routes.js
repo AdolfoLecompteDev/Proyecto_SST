@@ -1,15 +1,18 @@
 import { Router } from 'express'
 import auth from '../../middlewares/auth.middleware.js'
+import role from '../../middlewares/role.middleware.js'
 import { misCertificados, list, getOne, verificar } from './certificados.controller.js'
 
 const router = Router()
+const adminOnly = role('ADMIN', 'SUPER_USUARIO')
 
+// Público — verificar por código
 router.get('/verificar/:codigo', verificar)
 
 router.use(auth)
 
 router.get('/mis', misCertificados)
-router.get('/', list)
+router.get('/', adminOnly, list)
 router.get('/:id', getOne)
 
 export default router

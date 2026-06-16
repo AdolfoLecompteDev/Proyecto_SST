@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState, useRef } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth.js'
 import { BellIcon, HelpCircleIcon, SettingsIcon, SearchIcon } from '../ui/Icons.jsx'
 import { ROUTES } from '../../utils/constants.js'
@@ -8,14 +8,27 @@ import { fetchNotificaciones } from '../../api/notificacionesApi.js'
 export default function Navbar() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [notifCount, setNotifCount] = useState(0)
+  const prevPath = useRef(location.pathname)
 
-  useEffect(() => {
+  const refreshCount = () => {
     if (!user) return
     fetchNotificaciones()
-      .then((res) => setNotifCount(res.data.data.length))
+      .then((res) => setNotifCount(res.data.data.filter((n) => !n.leida).length))
       .catch(() => {})
-  }, [user])
+  }
+
+  // Initial load
+  useEffect(() => { refreshCount() }, [user])
+
+  // Refresh when navigating away from /notificaciones
+  useEffect(() => {
+    if (prevPath.current === ROUTES.NOTIFICACIONES && location.pathname !== ROUTES.NOTIFICACIONES) {
+      refreshCount()
+    }
+    prevPath.current = location.pathname
+  }, [location.pathname])
 
   const initials = user
     ? user.nombre.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()

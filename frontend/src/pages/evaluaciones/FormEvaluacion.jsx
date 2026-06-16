@@ -9,6 +9,7 @@ const TIEMPO_LIMITE = 10 * 60
 export default function FormEvaluacion() {
   const navigate = useNavigate()
   const { id } = useParams()
+  const numId = Number(id)
 
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -18,9 +19,13 @@ export default function FormEvaluacion() {
   const [segundos, setSegundos] = useState(TIEMPO_LIMITE)
 
   useEffect(() => {
+    if (!id || isNaN(numId)) {
+      navigate('/capacitaciones', { replace: true })
+      return
+    }
     const load = async () => {
       try {
-        const res = await fetchPreguntas(id)
+        const res = await fetchPreguntas(numId)
         setData(res.data.data)
       } catch (err) {
         setError(err?.response?.data?.message || 'No se pudo cargar la evaluación')
@@ -29,7 +34,7 @@ export default function FormEvaluacion() {
       }
     }
     load()
-  }, [id])
+  }, [id, numId, navigate])
 
   const handleEnviar = useCallback(async (timeout = false) => {
     if (enviado || !data) return
@@ -40,15 +45,22 @@ export default function FormEvaluacion() {
       opcion_id: respuestas[p.id] ?? null,
     })).filter((r) => r.opcion_id !== null)
 
+    const evaluacion_id = numId
+    const capacitacion_id = data.evaluacion?.capacitacion_id ?? null
+
     try {
-      const res = await submitEvaluacion(id, respuestasArray)
+      const res = await submitEvaluacion(evaluacion_id, respuestasArray)
       const { puntaje, aprobado, correctas, total, certificado } = res.data.data
-      navigate('/evaluaciones/resultado', { state: { puntaje, aprobado, correctas, total, timeout, certificado } })
+      navigate('/evaluaciones/resultado', {
+        state: { puntaje, aprobado, correctas, total, timeout, certificado, evaluacion_id, capacitacion_id },
+      })
     } catch (err) {
       const msg = err?.response?.data?.message || 'Error al enviar la evaluación'
-      navigate('/evaluaciones/resultado', { state: { puntaje: 0, aprobado: false, correctas: 0, total: data.preguntas.length, timeout, error: msg } })
+      navigate('/evaluaciones/resultado', {
+        state: { puntaje: 0, aprobado: false, correctas: 0, total: data.preguntas.length, timeout, error: msg, evaluacion_id, capacitacion_id },
+      })
     }
-  }, [enviado, data, respuestas, id, navigate])
+  }, [enviado, data, respuestas, numId, navigate])
 
   useEffect(() => {
     if (enviado || loading) return

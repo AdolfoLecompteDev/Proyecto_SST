@@ -26,7 +26,8 @@ export const getAll = async ({ search = '', estado = null } = {}) => {
   const push = (v) => { params.push(v); return `$${params.length}` }
 
   if (search) {
-    conditions.push(`(u.nombre ILIKE ${push('%' + search + '%')} OR u.apellido ILIKE $${params.length} OR c.titulo ILIKE $${params.length} OR cert.codigo_certificado ILIKE $${params.length})`)
+    const p = push('%' + search + '%')
+    conditions.push(`(u.nombre ILIKE ${p} OR u.apellido ILIKE ${p} OR c.titulo ILIKE ${p} OR cert.codigo_certificado ILIKE ${p})`)
   }
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''

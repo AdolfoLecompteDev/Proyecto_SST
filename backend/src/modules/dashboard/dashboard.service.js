@@ -35,6 +35,20 @@ export const getStats = async () => {
     ORDER BY certificados DESC
   `)
 
+  const { rows: alertas } = await pool.query(`
+    SELECT
+      (SELECT COUNT(*)::int FROM sst.capacitaciones
+       WHERE fecha_vigencia < CURRENT_DATE AND estado = true) AS cap_vencidas,
+      (SELECT COUNT(*)::int
+       FROM sst.certificados cert
+       JOIN sst.capacitaciones c ON c.id = cert.capacitacion_id
+       WHERE c.fecha_vigencia BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '30 days') AS cert_proximos_vencer,
+      (SELECT COUNT(*)::int FROM sst.usuarios u
+       JOIN sst.roles r ON r.id = u.rol_id
+       WHERE u.estado = true AND r.nombre = 'FUNCIONARIO'
+       AND NOT EXISTS (SELECT 1 FROM sst.certificados WHERE usuario_id = u.id)) AS funcionarios_sin_cert
+  `)
+
   const { rows: actividadReciente } = await pool.query(`
     (SELECT 'certificado' AS tipo,
             u.nombre || ' ' || u.apellido AS usuario,
@@ -69,6 +83,7 @@ export const getStats = async () => {
     capacitaciones: { total: c.total_capacitaciones, activas: c.capacitaciones_activas },
     certificados: { total: cert.total_certificados, vigentes: cert.vigentes },
     evaluaciones: { total: ev.total_intentos, aprobados: ev.aprobados, tasa_aprobacion: tasaAprobacion },
+    alertas: alertas[0],
     por_categoria: porCategoria,
     actividad_reciente: actividadReciente,
   }

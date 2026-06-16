@@ -5,7 +5,7 @@ export default function errorMiddleware(error, req, res, next) {
     return next(error)
   }
 
-  const status = error.statusCode || 500
+  const status = error.status || error.statusCode || 500
   const message = error.message || 'Error interno del servidor'
   return fail(res, message, status)
 }

@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import PageWrapper from '../../components/layout/PageWrapper.jsx'
 import { CheckCircleIcon, AlertTriangleIcon, CertificateIcon, BarChartIcon } from '../../components/ui/Icons.jsx'
@@ -7,11 +8,19 @@ export default function ResultadoEvaluacion() {
   const { state } = useLocation()
   const navigate = useNavigate()
 
+  useEffect(() => {
+    if (!state) navigate(ROUTES.CAPACITACIONES, { replace: true })
+  }, [state, navigate])
+
+  if (!state) return null
+
   const puntaje = state?.puntaje ?? 0
   const aprobado = state?.aprobado ?? false
   const correctas = state?.correctas ?? 0
   const total = state?.total ?? 0
   const timeout = state?.timeout ?? false
+  const evaluacion_id = state?.evaluacion_id
+  const capacitacion_id = state?.capacitacion_id
 
   const strokeDash = 283
   const strokeOffset = strokeDash - (strokeDash * puntaje) / 100
@@ -19,7 +28,7 @@ export default function ResultadoEvaluacion() {
   return (
     <PageWrapper
       title="Resultado de Evaluación"
-      subtitle="Trabajo Seguro en Alturas"
+      subtitle={aprobado ? '¡Felicitaciones! Evaluación completada exitosamente.' : 'Evaluación completada.'}
     >
       <div className="mx-auto max-w-2xl">
         {/* Main result card */}
@@ -43,7 +52,7 @@ export default function ResultadoEvaluacion() {
             </div>
           </div>
 
-          {/* Status */}
+          {/* Status badge */}
           <div className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-body-md font-semibold ${
             aprobado ? 'bg-secondary text-on-secondary' : 'bg-error text-on-error'
           }`}>
@@ -81,7 +90,7 @@ export default function ResultadoEvaluacion() {
               <div className="flex-1">
                 <h3 className="text-body-md font-semibold text-on-surface">¡Certificado disponible!</h3>
                 <p className="mt-1 text-body-sm text-on-surface-variant">
-                  Has aprobado la evaluación. Tu certificado de Trabajo Seguro en Alturas está siendo generado y estará disponible en la sección de Certificados.
+                  Tu certificado ha sido generado y está disponible en la sección de Certificados.
                 </p>
                 <div className="mt-4 flex gap-3">
                   <button onClick={() => navigate(ROUTES.CERTIFICADOS)}
@@ -103,17 +112,26 @@ export default function ResultadoEvaluacion() {
               <div className="flex-1">
                 <h3 className="text-body-md font-semibold text-on-surface">Necesitas repasar el material</h3>
                 <p className="mt-1 text-body-sm text-on-surface-variant">
-                  El puntaje mínimo para aprobar es 70%. Te recomendamos revisar el módulo nuevamente antes de intentarlo otra vez.
+                  El puntaje mínimo para aprobar es 70%. Revisa el módulo nuevamente antes de reintentar.
                 </p>
                 <div className="mt-4 flex gap-3">
-                  <button onClick={() => navigate(ROUTES.EVALUACIONES)}
-                    className="rounded-lg bg-primary px-5 py-2.5 text-body-sm font-semibold text-on-primary hover:opacity-85">
-                    Reintentar evaluación
-                  </button>
-                  <button onClick={() => navigate('/capacitaciones/2')}
-                    className="rounded-lg border border-outline px-5 py-2.5 text-body-sm font-medium text-on-surface hover:bg-surface-container-low">
-                    Repasar módulo
-                  </button>
+                  {evaluacion_id && (
+                    <button onClick={() => navigate(`/evaluaciones/${evaluacion_id}/preguntas`)}
+                      className="rounded-lg bg-primary px-5 py-2.5 text-body-sm font-semibold text-on-primary hover:opacity-85">
+                      Reintentar evaluación
+                    </button>
+                  )}
+                  {capacitacion_id ? (
+                    <button onClick={() => navigate(`/capacitaciones/${capacitacion_id}`)}
+                      className="rounded-lg border border-outline px-5 py-2.5 text-body-sm font-medium text-on-surface hover:bg-surface-container-low">
+                      Repasar módulo
+                    </button>
+                  ) : (
+                    <button onClick={() => navigate(ROUTES.CAPACITACIONES)}
+                      className="rounded-lg border border-outline px-5 py-2.5 text-body-sm font-medium text-on-surface hover:bg-surface-container-low">
+                      Volver a capacitaciones
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

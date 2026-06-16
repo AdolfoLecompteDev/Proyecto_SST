@@ -1,7 +1,15 @@
 import pool from '../../config/db.js'
 
-// Genera notificaciones dinámicas desde la DB: certificados próximos a vencer,
-// evaluaciones aprobadas recientes y nuevas capacitaciones publicadas.
+// Create read-state table on first load
+pool.query(`
+  CREATE TABLE IF NOT EXISTS sst.notificaciones_leidas (
+    usuario_id INT REFERENCES sst.usuarios(id) ON DELETE CASCADE,
+    notif_id   TEXT,
+    leida_at   TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (usuario_id, notif_id)
+  )
+`).catch(() => {})
+
 export const getNotificaciones = async (usuario_id) => {
   const notifs = []
 
@@ -69,7 +77,37 @@ export const getNotificaciones = async (usuario_id) => {
     })
   }
 
-  // Ordenar por fecha desc
+  // Marcar las que el usuario ya leyó
+  if (notifs.length > 0) {
+    const { rows: leidas } = await pool.query(
+      `SELECT notif_id FROM sst.notificaciones_leidas WHERE usuario_id = $1`,
+      [usuario_id],
+    )
+    const leidasSet = new Set(leidas.map((r) => r.notif_id))
+    for (const n of notifs) {
+      if (leidasSet.has(n.id)) n.leida = true
+    }
+  }
+
   notifs.sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
   return notifs
+}
+
+export const marcarLeida = async (usuario_id, notif_id) => {
+  await pool.query(
+    `INSERT INTO sst.notificaciones_leidas (usuario_id, notif_id)
+     VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+    [usuario_id, notif_id],
+  )
+}
+
+export const marcarTodas = async (usuario_id, ids) => {
+  if (!ids?.length) return
+  // Build multi-row insert
+  const values = ids.map((_, i) => `($1, $${i + 2})`).join(', ')
+  await pool.query(
+    `INSERT INTO sst.notificaciones_leidas (usuario_id, notif_id)
+     VALUES ${values} ON CONFLICT DO NOTHING`,
+    [usuario_id, ...ids],
+  )
 }

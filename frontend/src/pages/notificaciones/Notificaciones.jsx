@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import PageWrapper from '../../components/layout/PageWrapper.jsx'
 import { CheckCircleIcon, AlertTriangleIcon, BellIcon, XIcon, ClockIcon, RefreshIcon } from '../../components/ui/Icons.jsx'
-import { fetchNotificaciones } from '../../api/notificacionesApi.js'
+import { fetchNotificaciones, marcarLeida as apiMarcarLeida, marcarTodas as apiMarcarTodas } from '../../api/notificacionesApi.js'
 
 const tipoIcono = {
   success: { icon: CheckCircleIcon, cls: 'bg-secondary-fixed text-secondary' },
   warning: { icon: AlertTriangleIcon, cls: 'bg-error-container text-error' },
-  info: { icon: BellIcon, cls: 'bg-primary-fixed text-on-primary-fixed' },
-  system: { icon: ClockIcon, cls: 'bg-surface-container-high text-on-surface-variant' },
+  info:    { icon: BellIcon,          cls: 'bg-primary-fixed text-on-primary-fixed' },
+  system:  { icon: ClockIcon,         cls: 'bg-surface-container-high text-on-surface-variant' },
 }
 
 const tabs = ['Todas', 'No leídas', 'Sistema']
@@ -33,7 +33,7 @@ export default function Notificaciones() {
     try {
       setLoading(true)
       const res = await fetchNotificaciones()
-      setNotificaciones(res.data.data.map((n) => ({ ...n, leida: false })))
+      setNotificaciones(res.data.data)
       setError(null)
     } catch {
       setError('No se pudieron cargar las notificaciones')
@@ -44,14 +44,19 @@ export default function Notificaciones() {
 
   useEffect(() => { load() }, [])
 
-  const marcarLeida = (id) =>
+  const marcarLeida = async (id) => {
     setNotificaciones((prev) => prev.map((n) => n.id === id ? { ...n, leida: true } : n))
+    apiMarcarLeida(id).catch(() => {})
+  }
 
   const eliminar = (id) =>
     setNotificaciones((prev) => prev.filter((n) => n.id !== id))
 
-  const marcarTodas = () =>
+  const marcarTodas = async () => {
+    const ids = notificaciones.filter((n) => !n.leida).map((n) => n.id)
     setNotificaciones((prev) => prev.map((n) => ({ ...n, leida: true })))
+    apiMarcarTodas(ids).catch(() => {})
+  }
 
   const filtradas = notificaciones.filter((n) => {
     if (tabActiva === 'No leídas') return !n.leida
@@ -120,7 +125,9 @@ export default function Notificaciones() {
             return (
               <div key={n.id} onClick={() => marcarLeida(n.id)}
                 className={`group flex gap-4 rounded-xl border p-5 transition-colors cursor-pointer ${
-                  n.leida ? 'border-outline-variant bg-surface-container-lowest' : 'border-primary/20 bg-primary/[0.02]'
+                  n.leida
+                    ? 'border-outline-variant bg-surface-container-lowest'
+                    : 'border-primary/20 bg-primary/[0.02]'
                 }`}>
                 <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl ${cls}`}>
                   <Icon size={18} />

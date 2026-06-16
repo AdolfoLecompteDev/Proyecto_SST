@@ -3,10 +3,15 @@ import PageWrapper from '../../components/layout/PageWrapper.jsx'
 import { DownloadIcon, CheckCircleIcon, ClockIcon, AlertTriangleIcon, BarChartIcon, RefreshIcon } from '../../components/ui/Icons.jsx'
 import { fetchSeguimiento } from '../../api/seguimientoApi.js'
 
+// Estados:
+// Completado  → aprobó todas las capacitaciones disponibles (verde)
+// En progreso → aprobó al menos 1 pero no todas (azul)
+// Pendiente   → tiene capacitaciones disponibles pero no ha aprobado ninguna (amarillo)
+// Sin iniciar → no aparece en ningún intento todavía (gris)
 const estadoBadge = {
-  Completado: { cls: 'bg-secondary-fixed text-on-secondary-fixed', icon: CheckCircleIcon },
-  'En progreso': { cls: 'bg-primary-fixed text-on-primary-fixed', icon: ClockIcon },
-  Pendiente: { cls: 'bg-error-container text-error', icon: AlertTriangleIcon },
+  Completado:    { cls: 'bg-emerald-100 text-emerald-700',  icon: CheckCircleIcon   },
+  'En progreso': { cls: 'bg-blue-100 text-blue-700',        icon: ClockIcon         },
+  Pendiente:     { cls: 'bg-amber-100 text-amber-700',      icon: AlertTriangleIcon },
   'Sin iniciar': { cls: 'bg-surface-container-high text-on-surface-variant', icon: ClockIcon },
 }
 
@@ -73,14 +78,15 @@ export default function ReporteSeguimiento() {
       {/* Summary cards */}
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
-          { label: 'Total funcionarios', value: loading ? '...' : empleados.length, color: 'text-on-surface' },
-          { label: 'Completaron todo', value: loading ? '...' : completados, color: 'text-secondary' },
-          { label: 'En progreso', value: loading ? '...' : enProgreso, color: 'text-primary' },
-          { label: 'Sin iniciar', value: loading ? '...' : sinIniciar, color: 'text-error' },
+          { label: 'Total funcionarios', value: loading ? '...' : empleados.length, color: 'text-on-surface', desc: 'registrados en el sistema' },
+          { label: 'Completado', value: loading ? '...' : completados, color: 'text-emerald-600', desc: 'aprobaron todas las capacitaciones' },
+          { label: 'En progreso', value: loading ? '...' : enProgreso, color: 'text-blue-600', desc: 'han aprobado al menos una' },
+          { label: 'Pendiente', value: loading ? '...' : sinIniciar, color: 'text-amber-600', desc: 'aún no han aprobado ninguna' },
         ].map((r) => (
           <div key={r.label} className="rounded-xl border border-outline-variant bg-surface-container-lowest p-5">
             <p className="text-body-sm text-on-surface-variant">{r.label}</p>
             <p className={`mt-2 text-headline-lg font-bold ${r.color}`}>{r.value}</p>
+            {r.desc && <p className="mt-1 text-label-sm text-on-surface-variant">{r.desc}</p>}
           </div>
         ))}
       </div>

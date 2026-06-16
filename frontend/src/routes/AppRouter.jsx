@@ -19,6 +19,9 @@ import Configuracion from '../pages/configuracion/Configuracion.jsx'
 import ProtectedRoute from './ProtectedRoute.jsx'
 import { ROLES, ROUTES } from '../utils/constants.js'
 
+const ADMIN_ROLES = [ROLES.SUPER_USUARIO, ROLES.ADMIN]
+const ALL_ROLES   = [ROLES.SUPER_USUARIO, ROLES.ADMIN, ROLES.FUNCIONARIO]
+
 export default function AppRouter() {
   return (
     <BrowserRouter>
@@ -26,35 +29,28 @@ export default function AppRouter() {
         <Route path={ROUTES.LOGIN} element={<Login />} />
         <Route path={ROUTES.RECUPERAR_PASSWORD} element={<RecuperarPassword />} />
 
-        <Route
-          element={
-            <ProtectedRoute
-              allowedRoles={[ROLES.SUPER_USUARIO, ROLES.ADMIN, ROLES.FUNCIONARIO]}
-            />
-          }
-        >
-          <Route path={ROUTES.DASHBOARD} element={<Dashboard />} />
-          <Route path={ROUTES.USUARIOS} element={<ListaUsuarios />} />
-          <Route path={ROUTES.USUARIOS_NUEVO} element={<FormUsuario />} />
+        {/* Todos los roles autenticados */}
+        <Route element={<ProtectedRoute allowedRoles={ALL_ROLES} />}>
+          <Route path={ROUTES.DASHBOARD}      element={<Dashboard />} />
           <Route path={ROUTES.CAPACITACIONES} element={<ListaCapacitaciones />} />
-          <Route
-            path={ROUTES.CAPACITACIONES_NUEVA}
-            element={<FormCapacitacion />}
-          />
-          <Route path="/capacitaciones/:id" element={<DetalleCapacitacion />} />
-          <Route path={ROUTES.EVALUACIONES} element={<FormEvaluacion />} />
+          <Route path="/capacitaciones/:id"   element={<DetalleCapacitacion />} />
+          <Route path={ROUTES.EVALUACIONES}   element={<FormEvaluacion />} />
           <Route path="/evaluaciones/:id/preguntas" element={<FormEvaluacion />} />
-          <Route path="/evaluaciones/resultado" element={<ResultadoEvaluacion />} />
-          <Route path={ROUTES.CERTIFICADOS} element={<MisCertificados />} />
-          <Route path={ROUTES.SEGUIMIENTO} element={<ReporteSeguimiento />} />
-          <Route path={ROUTES.CONSULTAS} element={<HistorialConsultas />} />
-          <Route
-            path={ROUTES.CONSULTAS_ANTECEDENTES}
-            element={<ConsultaAntecedentesMiembros />}
-          />
+          <Route path="/evaluaciones/resultado"     element={<ResultadoEvaluacion />} />
+          <Route path={ROUTES.CERTIFICADOS}   element={<MisCertificados />} />
           <Route path={ROUTES.NOTIFICACIONES} element={<Notificaciones />} />
-          <Route path={ROUTES.PERFIL} element={<PerfilUsuario />} />
-          <Route path={ROUTES.CONFIGURACION} element={<Configuracion />} />
+          <Route path={ROUTES.PERFIL}         element={<PerfilUsuario />} />
+          <Route path={ROUTES.CONFIGURACION}  element={<Configuracion />} />
+        </Route>
+
+        {/* Solo ADMIN y SUPER_USUARIO */}
+        <Route element={<ProtectedRoute allowedRoles={ADMIN_ROLES} />}>
+          <Route path={ROUTES.USUARIOS}           element={<ListaUsuarios />} />
+          <Route path={ROUTES.USUARIOS_NUEVO}     element={<FormUsuario />} />
+          <Route path={ROUTES.CAPACITACIONES_NUEVA} element={<FormCapacitacion />} />
+          <Route path={ROUTES.SEGUIMIENTO}        element={<ReporteSeguimiento />} />
+          <Route path={ROUTES.CONSULTAS}          element={<HistorialConsultas />} />
+          <Route path={ROUTES.CONSULTAS_ANTECEDENTES} element={<ConsultaAntecedentesMiembros />} />
         </Route>
 
         <Route path="*" element={<Navigate to={ROUTES.DASHBOARD} replace />} />

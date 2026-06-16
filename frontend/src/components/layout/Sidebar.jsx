@@ -3,26 +3,29 @@ import { useAuth } from '../../hooks/useAuth.js'
 import { ROUTES } from '../../utils/constants.js'
 import {
   ShieldIcon, GridIcon, GraduationCapIcon, ShieldCheckIcon,
-  CertificateIcon, BarChartIcon, UsersIcon, LogOutIcon, PlusIcon,
+  CertificateIcon, BarChartIcon, UsersIcon, LogOutIcon, PlusIcon, BellIcon,
 } from '../ui/Icons.jsx'
 
-const navItems = [
-  { label: 'Dashboard', to: ROUTES.DASHBOARD, icon: GridIcon, end: true },
-  { label: 'Capacitaciones', to: ROUTES.CAPACITACIONES, icon: GraduationCapIcon },
-  { label: 'Verificación', to: ROUTES.CONSULTAS_ANTECEDENTES, icon: ShieldCheckIcon },
-  { label: 'Certificados', to: ROUTES.CERTIFICADOS, icon: CertificateIcon },
-  { label: 'Reportes', to: ROUTES.SEGUIMIENTO, icon: BarChartIcon },
-  { label: 'Usuarios', to: ROUTES.USUARIOS, icon: UsersIcon },
+const NAV_ITEMS = [
+  { label: 'Dashboard',      to: ROUTES.DASHBOARD,             icon: GridIcon,         end: true,  adminOnly: false },
+  { label: 'Capacitaciones', to: ROUTES.CAPACITACIONES,        icon: GraduationCapIcon,end: false, adminOnly: false },
+  { label: 'Verificación',   to: ROUTES.CONSULTAS_ANTECEDENTES,icon: ShieldCheckIcon,  end: false, adminOnly: true  },
+  { label: 'Certificados',   to: ROUTES.CERTIFICADOS,          icon: CertificateIcon,  end: false, adminOnly: false },
+  { label: 'Reportes',       to: ROUTES.SEGUIMIENTO,           icon: BarChartIcon,     end: false, adminOnly: true  },
+  { label: 'Usuarios',       to: ROUTES.USUARIOS,              icon: UsersIcon,        end: false, adminOnly: true  },
 ]
 
 export default function Sidebar() {
-  const { logout } = useAuth()
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const esAdmin = user?.rol === 'ADMIN' || user?.rol === 'SUPER_USUARIO'
 
   const handleLogout = () => {
     logout()
     navigate(ROUTES.LOGIN)
   }
+
+  const visibleItems = NAV_ITEMS.filter((item) => !item.adminOnly || esAdmin)
 
   return (
     <aside className="flex h-screen w-60 flex-shrink-0 flex-col border-r border-outline-variant bg-surface-container-lowest">
@@ -37,20 +40,30 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* New Audit button */}
+      {/* Quick action — diferente por rol */}
       <div className="px-4 pb-4">
-        <button
-          onClick={() => navigate(ROUTES.CAPACITACIONES_NUEVA)}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-body-sm font-semibold text-on-primary transition-opacity hover:opacity-85"
-        >
-          <PlusIcon size={16} />
-          Nueva Auditoría
-        </button>
+        {esAdmin ? (
+          <button
+            onClick={() => navigate(ROUTES.CONSULTAS_ANTECEDENTES)}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-body-sm font-semibold text-on-primary transition-opacity hover:opacity-85"
+          >
+            <PlusIcon size={16} />
+            Nueva Verificación
+          </button>
+        ) : (
+          <button
+            onClick={() => navigate(ROUTES.NOTIFICACIONES)}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-body-sm font-semibold text-on-primary transition-opacity hover:opacity-85"
+          >
+            <BellIcon size={16} />
+            Notificaciones
+          </button>
+        )}
       </div>
 
       {/* Nav */}
       <nav className="flex-1 space-y-0.5 px-3">
-        {navItems.map(({ label, to, icon: Icon, end }) => (
+        {visibleItems.map(({ label, to, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}
@@ -74,8 +87,14 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Logout */}
-      <div className="border-t border-outline-variant px-3 py-4">
+      {/* Rol badge + Logout */}
+      <div className="border-t border-outline-variant px-3 py-4 space-y-1">
+        <div className="px-3 py-1.5">
+          <p className="text-label-sm text-on-surface-variant truncate">{user?.nombre} {user?.apellido}</p>
+          <span className={`text-label-sm font-medium ${esAdmin ? 'text-primary' : 'text-secondary'}`}>
+            {user?.rol === 'SUPER_USUARIO' ? 'Super Usuario' : user?.rol === 'ADMIN' ? 'Administrador' : 'Funcionario'}
+          </span>
+        </div>
         <button
           onClick={handleLogout}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-body-sm font-medium text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface"

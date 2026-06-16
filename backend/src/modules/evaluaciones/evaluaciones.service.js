@@ -16,7 +16,7 @@ export const getByCapacitacion = async (capacitacion_id, usuario_id) => {
 
 export const getPreguntas = async (evaluacion_id, usuario_id) => {
   const { rows: ev } = await pool.query(
-    'SELECT id, titulo, puntaje_minimo, max_intentos FROM sst.evaluaciones WHERE id = $1 AND estado = true',
+    'SELECT id, titulo, puntaje_minimo, max_intentos, capacitacion_id FROM sst.evaluaciones WHERE id = $1 AND estado = true',
     [evaluacion_id],
   )
   if (!ev.length) throw Object.assign(new Error('Evaluación no encontrada'), { status: 404 })

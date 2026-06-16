@@ -5,7 +5,7 @@ export const getAll = async ({ search = '', categoria_id = null, estado = null }
   const params = []
   const push = (v) => { params.push(v); return `$${params.length}` }
 
-  if (search) conditions.push(`(c.titulo ILIKE ${push('%' + search + '%')} OR c.descripcion ILIKE $${params.length})`)
+  if (search) { const p = push('%' + search + '%'); conditions.push(`(c.titulo ILIKE ${p} OR c.descripcion ILIKE ${p})`) }
   if (categoria_id) conditions.push(`c.categoria_id = ${push(Number(categoria_id))}`)
   if (estado !== null) conditions.push(`c.estado = ${push(estado)}`)
 
