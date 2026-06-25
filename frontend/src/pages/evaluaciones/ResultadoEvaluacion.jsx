@@ -48,7 +48,7 @@ export default function ResultadoEvaluacion() {
               />
             </svg>
             <div>
-              <p className={`text-headline-xl font-bold ${aprobado ? 'text-secondary' : 'text-error'}`}>{puntaje}%</p>
+              <p className={`text-headline-lg font-bold ${aprobado ? 'text-secondary' : 'text-error'}`}>{Math.round(Number(puntaje))}%</p>
             </div>
           </div>
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import PageWrapper from '../../components/layout/PageWrapper.jsx'
 import { DownloadIcon, CheckCircleIcon, ClockIcon, AlertTriangleIcon, BarChartIcon, RefreshIcon } from '../../components/ui/Icons.jsx'
-import { fetchSeguimiento } from '../../api/seguimientoApi.js'
+import { fetchSeguimiento, refreshSeguimiento } from '../../api/seguimientoApi.js'
 
 // Estados:
 // Completado  → aprobó todas las capacitaciones disponibles (verde)
@@ -41,6 +41,17 @@ export default function ReporteSeguimiento() {
     }
   }
 
+  const handleRefreshData = async () => {
+    try {
+      setLoading(true)
+      await refreshSeguimiento() // Actualizar la vista materializada en BD
+      await load() // Volver a cargar los datos
+    } catch {
+      setError('No se pudo refrescar la vista de datos')
+      setLoading(false)
+    }
+  }
+
   useEffect(() => { load() }, [])
 
   const filtrados = empleados.filter((e) =>
@@ -61,7 +72,7 @@ export default function ReporteSeguimiento() {
       subtitle="Reporte de avance por funcionario."
       actions={
         <div className="flex gap-2">
-          <button onClick={load} disabled={loading}
+          <button onClick={handleRefreshData} disabled={loading}
             className="flex items-center gap-1.5 rounded-lg border border-outline-variant px-3 py-2.5 text-body-sm text-on-surface-variant hover:bg-surface-container-low disabled:opacity-50">
             <RefreshIcon size={14} className={loading ? 'animate-spin' : ''} />
           </button>

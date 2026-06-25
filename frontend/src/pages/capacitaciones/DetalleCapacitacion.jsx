@@ -56,10 +56,32 @@ function RecursoCard({ recurso, index, isAdmin, onDelete, loading }) {
 
   return (
     <div style={{ border: '1px solid var(--color-outline-variant)', borderRadius: 16, overflow: 'hidden', background: 'var(--color-surface-container-lowest)' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px' }}>
+      {/* Embed para videos de YouTube/Vimeo */}
+      {embedUrl && (
+        <div style={{ background: '#000' }}>
+          <iframe
+            src={embedUrl}
+            title={recurso.nombre_original}
+            style={{ width: '100%', aspectRatio: '16/9', display: 'block', border: 'none' }}
+            allowFullScreen
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          />
+        </div>
+      )}
+
+      {/* Embed para video nativo */}
+      {recurso.tipo === 'video' && !embedUrl && recurso.url && (
+        <div style={{ background: '#000' }}>
+          <video controls style={{ width: '100%', display: 'block' }} src={recurso.url}>
+            Tu navegador no soporta video HTML5.
+          </video>
+        </div>
+      )}
+
+      {/* Info / Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '16px 20px', borderTop: (embedUrl || recurso.tipo === 'video') ? '1px solid var(--color-outline-variant)' : 'none' }}>
         <div style={{
-          width: 40, height: 40, borderRadius: 10,
+          width: 40, height: 40, borderRadius: 10, marginTop: 2,
           background: meta.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
         }}>
           <Icon size={18} style={{ color: meta.color }} />
@@ -72,11 +94,11 @@ function RecursoCard({ recurso, index, isAdmin, onDelete, loading }) {
             }}>{meta.label}</span>
             <span style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>Paso {index + 1}</span>
           </div>
-          <p style={{ margin: '4px 0 0', fontWeight: 600, fontSize: 14, color: 'var(--color-on-surface)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <p style={{ margin: '6px 0 0', fontWeight: 700, fontSize: 16, color: 'var(--color-on-surface)' }}>
             {recurso.nombre_original}
           </p>
           {recurso.descripcion && (
-            <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--color-on-surface-variant)' }}>{recurso.descripcion}</p>
+            <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--color-on-surface-variant)', lineHeight: '1.5' }}>{recurso.descripcion}</p>
           )}
         </div>
         <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
@@ -110,28 +132,6 @@ function RecursoCard({ recurso, index, isAdmin, onDelete, loading }) {
           )}
         </div>
       </div>
-
-      {/* Embed para videos de YouTube/Vimeo */}
-      {embedUrl && (
-        <div style={{ borderTop: '1px solid var(--color-outline-variant)', background: '#000' }}>
-          <iframe
-            src={embedUrl}
-            title={recurso.nombre_original}
-            style={{ width: '100%', aspectRatio: '16/9', display: 'block', border: 'none' }}
-            allowFullScreen
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          />
-        </div>
-      )}
-
-      {/* Embed para video nativo */}
-      {recurso.tipo === 'video' && !embedUrl && recurso.url && (
-        <div style={{ borderTop: '1px solid var(--color-outline-variant)', background: '#000' }}>
-          <video controls style={{ width: '100%', display: 'block' }} src={recurso.url}>
-            Tu navegador no soporta video HTML5.
-          </video>
-        </div>
-      )}
     </div>
   )
 }
