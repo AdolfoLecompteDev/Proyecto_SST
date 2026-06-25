@@ -83,27 +83,54 @@ export default function ResultadoEvaluacion() {
         {/* Certificate or retry */}
         <div className="mt-6 rounded-xl border border-outline-variant bg-surface-container-lowest p-6">
           {aprobado ? (
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-secondary-fixed">
-                <CertificateIcon size={22} className="text-secondary" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-body-md font-semibold text-on-surface">¡Certificado disponible!</h3>
-                <p className="mt-1 text-body-sm text-on-surface-variant">
-                  Tu certificado ha sido generado y está disponible en la sección de Certificados.
-                </p>
-                <div className="mt-4 flex gap-3">
-                  <button onClick={() => navigate(ROUTES.CERTIFICADOS)}
-                    className="rounded-lg bg-secondary px-5 py-2.5 text-body-sm font-semibold text-on-secondary hover:opacity-85">
-                    Ver mis certificados
-                  </button>
-                  <button onClick={() => navigate(ROUTES.CAPACITACIONES)}
-                    className="rounded-lg border border-outline px-5 py-2.5 text-body-sm font-medium text-on-surface hover:bg-surface-container-low">
-                    Volver a capacitaciones
-                  </button>
+            state?.certificado ? (
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-secondary-fixed">
+                  <CertificateIcon size={22} className="text-secondary" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-body-md font-semibold text-on-surface">¡Certificado disponible!</h3>
+                  <p className="mt-1 text-body-sm text-on-surface-variant">
+                    Tu certificado ha sido generado y está disponible en la sección de Certificados.
+                  </p>
+                  <div className="mt-4 flex gap-3">
+                    <button onClick={() => navigate(ROUTES.CERTIFICADOS)}
+                      className="rounded-lg bg-secondary px-5 py-2.5 text-body-sm font-semibold text-on-secondary hover:opacity-85">
+                      Ver mis certificados
+                    </button>
+                    <button onClick={() => navigate(ROUTES.CAPACITACIONES)}
+                      className="rounded-lg border border-outline px-5 py-2.5 text-body-sm font-medium text-on-surface hover:bg-surface-container-low">
+                      Volver a capacitaciones
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-secondary-fixed">
+                  <CheckCircleIcon size={22} className="text-secondary" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-body-md font-semibold text-on-surface">¡Quiz completado con éxito!</h3>
+                  <p className="mt-1 text-body-sm text-on-surface-variant">
+                    Has aprobado este quiz de práctica. Completa todos los quizzes para desbloquear el examen final.
+                  </p>
+                  <div className="mt-4 flex gap-3">
+                    {capacitacion_id ? (
+                      <button onClick={() => navigate(`/capacitaciones/${capacitacion_id}`)}
+                        className="rounded-lg bg-secondary px-5 py-2.5 text-body-sm font-semibold text-on-secondary hover:opacity-85">
+                        Continuar capacitación
+                      </button>
+                    ) : (
+                      <button onClick={() => navigate(ROUTES.CAPACITACIONES)}
+                        className="rounded-lg bg-secondary px-5 py-2.5 text-body-sm font-semibold text-on-secondary hover:opacity-85">
+                        Volver a capacitaciones
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
           ) : (
             <div className="flex items-start gap-4">
               <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-error-container">
