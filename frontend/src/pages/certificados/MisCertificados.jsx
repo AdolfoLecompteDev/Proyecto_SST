@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import PageWrapper from '../../components/layout/PageWrapper.jsx'
 import { AlertTriangleIcon, CheckCircleIcon, DownloadIcon, ShareIcon, ClipboardIcon, RefreshIcon, SearchIcon, UsersIcon } from '../../components/ui/Icons.jsx'
-import { fetchMisCertificados, fetchAllCertificados } from '../../api/certificadosApi.js'
+import { fetchMisCertificados, fetchAllCertificados, downloadCertificadoPDF } from '../../api/certificadosApi.js'
 import { useAuth } from '../../hooks/useAuth.js'
 
 const tabs = ['Todas', 'Vigentes', 'Expiradas']
@@ -122,7 +122,7 @@ function CardGrid({ certificados, loading }) {
                     <div className="mt-4 flex gap-2">
                       {cert.estadoCalc !== 'expirado' ? (
                         <>
-                          <button className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-outline py-2 text-body-sm font-medium text-on-surface hover:bg-surface-container-low">
+                          <button onClick={() => downloadCertificadoPDF(cert.id, cert.codigo_certificado)} className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-outline py-2 text-body-sm font-medium text-on-surface hover:bg-surface-container-low">
                             <DownloadIcon size={14} /> PDF
                           </button>
                           <button className="flex h-9 w-9 items-center justify-center rounded-lg border border-outline text-on-surface-variant hover:bg-surface-container-low">

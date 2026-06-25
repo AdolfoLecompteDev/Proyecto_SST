@@ -11,6 +11,7 @@ import consultasRoutes from './modules/consultas/consultas.routes.js'
 import dashboardRoutes from './modules/dashboard/dashboard.routes.js'
 import auditoriaRoutes from './modules/auditoria/auditoria.routes.js'
 import notificacionesRoutes from './modules/notificaciones/notificaciones.routes.js'
+import configRoutes from './modules/config/config.routes.js'
 import errorHandler from './middlewares/error.middleware.js'
 
 dotenv.config()
@@ -56,7 +57,9 @@ app.use('/api/consultas', consultasRoutes)
 app.use('/api/dashboard', dashboardRoutes)
 app.use('/api/auditoria', auditoriaRoutes)
 app.use('/api/notificaciones', notificacionesRoutes)
+app.use('/api/config', configRoutes)
 
 app.use(errorHandler)
 
 export default app
+

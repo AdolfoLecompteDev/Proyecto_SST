@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import Login from '../pages/auth/Login.jsx'
 import RecuperarPassword from '../pages/auth/RecuperarPassword.jsx'
+import ResetPassword from '../pages/auth/ResetPassword.jsx'
 import Dashboard from '../pages/dashboard/Dashboard.jsx'
 import ListaUsuarios from '../pages/usuarios/ListaUsuarios.jsx'
 import FormUsuario from '../pages/usuarios/FormUsuario.jsx'
@@ -9,6 +10,7 @@ import DetalleCapacitacion from '../pages/capacitaciones/DetalleCapacitacion.jsx
 import FormCapacitacion from '../pages/capacitaciones/FormCapacitacion.jsx'
 import FormEvaluacion from '../pages/evaluaciones/FormEvaluacion.jsx'
 import ResultadoEvaluacion from '../pages/evaluaciones/ResultadoEvaluacion.jsx'
+import GestionQuiz from '../pages/capacitaciones/GestionQuiz.jsx'
 import MisCertificados from '../pages/certificados/MisCertificados.jsx'
 import ReporteSeguimiento from '../pages/seguimiento/ReporteSeguimiento.jsx'
 import HistorialConsultas from '../pages/consultas/HistorialConsultas.jsx'
@@ -28,6 +30,7 @@ export default function AppRouter() {
       <Routes>
         <Route path={ROUTES.LOGIN} element={<Login />} />
         <Route path={ROUTES.RECUPERAR_PASSWORD} element={<RecuperarPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
 
         {/* Todos los roles autenticados */}
         <Route element={<ProtectedRoute allowedRoles={ALL_ROLES} />}>
@@ -48,6 +51,7 @@ export default function AppRouter() {
           <Route path={ROUTES.USUARIOS}           element={<ListaUsuarios />} />
           <Route path={ROUTES.USUARIOS_NUEVO}     element={<FormUsuario />} />
           <Route path={ROUTES.CAPACITACIONES_NUEVA} element={<FormCapacitacion />} />
+          <Route path="/capacitaciones/:id/quiz"  element={<GestionQuiz />} />
           <Route path={ROUTES.SEGUIMIENTO}        element={<ReporteSeguimiento />} />
           <Route path={ROUTES.CONSULTAS}          element={<HistorialConsultas />} />
           <Route path={ROUTES.CONSULTAS_ANTECEDENTES} element={<ConsultaAntecedentesMiembros />} />

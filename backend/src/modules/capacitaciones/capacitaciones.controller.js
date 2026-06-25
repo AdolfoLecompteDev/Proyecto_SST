@@ -37,3 +37,25 @@ export const categorias = async (req, res, next) => {
     ok(res, data)
   } catch (e) { next(e) }
 }
+
+export const addRecurso = async (req, res, next) => {
+  try {
+    const { tipo, nombre_original, url, descripcion, orden } = req.body
+    const data = await svc.addRecurso(Number(req.params.id), { tipo, nombre_original, url, descripcion, orden })
+    created(res, data, 'Recurso agregado')
+  } catch (e) { next(e) }
+}
+
+export const editRecurso = async (req, res, next) => {
+  try {
+    const data = await svc.updateRecurso(Number(req.params.id), Number(req.params.rid), req.body)
+    ok(res, data, 'Recurso actualizado')
+  } catch (e) { next(e) }
+}
+
+export const removeRecurso = async (req, res, next) => {
+  try {
+    await svc.deleteRecurso(Number(req.params.id), Number(req.params.rid))
+    ok(res, null, 'Recurso eliminado')
+  } catch (e) { next(e) }
+}

@@ -48,3 +48,38 @@ export const perfilStats = async (req, res, next) => {
     next(err)
   }
 }
+
+export const solicitarRecuperacion = async (req, res, next) => {
+  try {
+    const { email } = req.body
+    if (!email) return fail(res, 'El correo es requerido', 400)
+    
+    // Call service, but don't wait for email to send to prevent timing attacks
+    import('./auth.service.js').then(({ forgotPassword }) => {
+      forgotPassword(email).catch(console.error)
+    })
+    
+    // Always return success to prevent email enumeration
+    ok(res, null, 'Si el correo existe, enviaremos un enlace de recuperación')
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const restablecerPassword = async (req, res, next) => {
+  try {
+    const { token } = req.params
+    const { password } = req.body
+    
+    if (!token || !password) return fail(res, 'Token y nueva contraseña requeridos', 400)
+    if (password.length < 6) return fail(res, 'La nueva contraseña debe tener mínimo 6 caracteres', 400)
+    
+    const { resetPassword } = await import('./auth.service.js')
+    await resetPassword(token, password)
+    
+    ok(res, null, 'Contraseña actualizada exitosamente')
+  } catch (err) {
+    if (err.status) return fail(res, err.message, err.status)
+    next(err)
+  }
+}

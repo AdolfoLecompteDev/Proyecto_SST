@@ -40,7 +40,9 @@ export const getById = async (id) => {
   const cap = rows[0]
 
   const { rows: archivos } = await pool.query(
-    'SELECT id, tipo, nombre_original, url FROM sst.archivos_capacitacion WHERE capacitacion_id = $1',
+    `SELECT id, tipo, nombre_original, url, orden, descripcion
+     FROM sst.archivos_capacitacion WHERE capacitacion_id = $1
+     ORDER BY orden ASC, id ASC`,
     [id],
   )
   const { rows: evals } = await pool.query(
@@ -79,4 +81,59 @@ export const update = async (id, fields) => {
 export const getCategorias = async () => {
   const { rows } = await pool.query('SELECT id, nombre FROM sst.categorias ORDER BY nombre')
   return rows
+}
+
+export const addRecurso = async (capacitacion_id, { tipo, nombre_original, url, descripcion, orden }) => {
+  const TIPOS = ['video', 'pdf', 'video_url', 'docx', 'enlace']
+  if (!TIPOS.includes(tipo)) throw Object.assign(new Error('Tipo de recurso inválido'), { status: 400 })
+  if (!url) throw Object.assign(new Error('La URL o enlace es requerido'), { status: 400 })
+  if (!nombre_original) throw Object.assign(new Error('El nombre es requerido'), { status: 400 })
+
+  // Calcular orden automático si no se provee
+  let ordenFinal = orden
+  if (!ordenFinal) {
+    const { rows } = await pool.query(
+      'SELECT COALESCE(MAX(orden), 0) + 1 AS siguiente FROM sst.archivos_capacitacion WHERE capacitacion_id = $1',
+      [capacitacion_id],
+    )
+    ordenFinal = rows[0].siguiente
+  }
+
+  const { rows } = await pool.query(
+    `INSERT INTO sst.archivos_capacitacion
+       (capacitacion_id, tipo, nombre_original, nombre_almacenado, url, orden, descripcion)
+     VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id, tipo, nombre_original, url, orden, descripcion`,
+    [capacitacion_id, tipo, nombre_original, null, url, ordenFinal, descripcion || null],
+  )
+  return rows[0]
+}
+
+export const updateRecurso = async (capacitacion_id, recurso_id, fields) => {
+  const allowed = ['nombre_original', 'descripcion', 'orden', 'url']
+  const sets = []
+  const params = []
+  for (const k of allowed) {
+    if (fields[k] !== undefined) {
+      params.push(fields[k])
+      sets.push(`${k} = $${params.length}`)
+    }
+  }
+  if (!sets.length) return
+  params.push(recurso_id, capacitacion_id)
+  const { rows } = await pool.query(
+    `UPDATE sst.archivos_capacitacion SET ${sets.join(', ')}
+     WHERE id = $${params.length - 1} AND capacitacion_id = $${params.length}
+     RETURNING id, tipo, nombre_original, url, orden, descripcion`,
+    params,
+  )
+  if (!rows.length) throw Object.assign(new Error('Recurso no encontrado'), { status: 404 })
+  return rows[0]
+}
+
+export const deleteRecurso = async (capacitacion_id, recurso_id) => {
+  const { rowCount } = await pool.query(
+    'DELETE FROM sst.archivos_capacitacion WHERE id = $1 AND capacitacion_id = $2',
+    [recurso_id, capacitacion_id],
+  )
+  if (!rowCount) throw Object.assign(new Error('Recurso no encontrado'), { status: 404 })
 }

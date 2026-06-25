@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
+import { restablecerPassword } from '../../api/authApi.js'
 import { ROUTES } from '../../utils/constants.js'
-import { solicitarRecuperacion } from '../../api/authApi.js'
 
 function ShieldIcon() {
   return (
@@ -12,29 +12,42 @@ function ShieldIcon() {
   )
 }
 
-function MailIcon() {
+function LockIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect width="20" height="16" x="2" y="4" rx="2" />
-      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
     </svg>
   )
 }
 
-export default function RecuperarPassword() {
-  const [email, setEmail] = useState('')
-  const [enviado, setEnviado] = useState(false)
+export default function ResetPassword() {
+  const { token } = useParams()
+  const navigate = useNavigate()
+  
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [success, setSuccess] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!email) return
+    if (!password || !confirmPassword) return
+    if (password !== confirmPassword) {
+      setError('Las contraseñas no coinciden')
+      return
+    }
+    
+    setError(null)
     setLoading(true)
+    
     try {
-      await solicitarRecuperacion(email)
-      setEnviado(true)
-    } catch (error) {
-      alert('Error solicitando recuperación: ' + (error.response?.data?.message || error.message))
+      await restablecerPassword(token, password)
+      setSuccess(true)
+      setTimeout(() => navigate(ROUTES.LOGIN), 3000)
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Error al restablecer la contraseña')
     } finally {
       setLoading(false)
     }
@@ -50,10 +63,10 @@ export default function RecuperarPassword() {
         </div>
         <div className="flex flex-1 flex-col justify-center px-10">
           <h2 className="text-headline-xl font-bold leading-tight text-white">
-            Recuperación<br />de Acceso
+            Nueva<br />Contraseña
           </h2>
           <p className="mt-4 max-w-sm text-body-md text-on-tertiary-container">
-            Te enviaremos un enlace seguro para restablecer tu contraseña. El enlace expira en 30 minutos.
+            Ingresa tu nueva contraseña para acceder al sistema.
           </p>
         </div>
         <div className="px-10 py-6 text-label-sm text-on-tertiary-container">
@@ -64,28 +77,43 @@ export default function RecuperarPassword() {
       {/* Right panel */}
       <div className="flex w-full items-center justify-center bg-white px-gutter py-stack-lg lg:w-1/2">
         <div className="w-full max-w-sm rounded-xl border border-outline-variant bg-white p-8 shadow-elevation-2">
-          {!enviado ? (
+          {!success ? (
             <>
               <div className="mb-stack-lg">
-                <h1 className="text-headline-lg font-semibold text-on-surface">Restablecer contraseña</h1>
+                <h1 className="text-headline-lg font-semibold text-on-surface">Nueva Contraseña</h1>
                 <p className="mt-2 text-body-sm text-on-surface-variant">
-                  Ingresa tu correo institucional y te enviaremos el enlace de recuperación.
+                  Establece una contraseña segura (mínimo 6 caracteres).
                 </p>
               </div>
 
+              {error && (
+                <div className="mb-4 rounded-md bg-error-container p-3 text-body-sm text-error">
+                  {error}
+                </div>
+              )}
+
               <form className="space-y-stack-md" onSubmit={handleSubmit}>
                 <div>
-                  <label className="mb-1 block text-body-sm font-medium text-on-surface">Correo Corporativo</label>
+                  <label className="mb-1 block text-body-sm font-medium text-on-surface">Contraseña</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant"><MailIcon /></span>
-                    <input type="email" placeholder="nombre@empresa.com" value={email} onChange={(e) => setEmail(e.target.value)}
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant"><LockIcon /></span>
+                    <input type="password" placeholder="••••••" value={password} onChange={(e) => setPassword(e.target.value)}
+                      className="w-full rounded-md border border-outline bg-white py-2.5 pl-10 pr-3 text-body-md text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-body-sm font-medium text-on-surface">Confirmar Contraseña</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant"><LockIcon /></span>
+                    <input type="password" placeholder="••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
                       className="w-full rounded-md border border-outline bg-white py-2.5 pl-10 pr-3 text-body-md text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none" />
                   </div>
                 </div>
 
                 <button type="submit" disabled={loading}
                   className="w-full rounded-md bg-primary py-3 text-body-md font-semibold text-on-primary transition-opacity hover:opacity-80 disabled:opacity-50">
-                  {loading ? 'Enviando...' : 'Enviar enlace de recuperación'}
+                  {loading ? 'Guardando...' : 'Restablecer contraseña'}
                 </button>
               </form>
             </>
@@ -97,9 +125,9 @@ export default function RecuperarPassword() {
                   <polyline points="22 4 12 14.01 9 11.01" />
                 </svg>
               </div>
-              <h2 className="text-headline-md font-semibold text-on-surface">Correo enviado</h2>
+              <h2 className="text-headline-md font-semibold text-on-surface">¡Contraseña actualizada!</h2>
               <p className="mt-2 text-body-sm text-on-surface-variant">
-                Enviamos el enlace a <strong>{email}</strong>. Revisa tu bandeja de entrada y la carpeta de spam.
+                Serás redirigido al inicio de sesión en unos segundos.
               </p>
             </div>
           )}

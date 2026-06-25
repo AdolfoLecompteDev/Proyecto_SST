@@ -76,3 +76,74 @@ export const getPerfilStats = async (usuario_id) => {
   if (!rows.length) throw Object.assign(new Error('Usuario no encontrado'), { status: 404 })
   return rows[0]
 }
+
+export const forgotPassword = async (email) => {
+  const { rows } = await pool.query('SELECT id, nombre FROM usuarios WHERE email = $1', [email])
+  if (!rows.length) return // Don't leak if email exists
+
+  const user = rows[0]
+  const crypto = await import('crypto')
+  const token = crypto.randomUUID()
+  
+  // Expiración 30 min
+  const expiraEn = new Date()
+  expiraEn.setMinutes(expiraEn.getMinutes() + 30)
+
+  await pool.query(
+    `INSERT INTO sst.tokens_recuperacion (usuario_id, token, expira_en) VALUES ($1, $2, $3)`,
+    [user.id, token, expiraEn]
+  )
+
+  const resetUrl = `http://localhost:5173/reset-password/${token}`
+
+  try {
+    const { default: transporter } = await import('../../config/mailer.js')
+    await transporter.sendMail({
+      from: process.env.MAIL_USER || '"SST Support" <no-reply@sst.local>',
+      to: email,
+      subject: 'Recuperación de Contraseña - SST',
+      html: `
+        <h2>Hola ${user.nombre},</h2>
+        <p>Has solicitado restablecer tu contraseña. Haz clic en el siguiente enlace:</p>
+        <a href="${resetUrl}">${resetUrl}</a>
+        <p>El enlace expirará en 30 minutos.</p>
+        <p>Si no solicitaste este cambio, puedes ignorar este correo.</p>
+      `
+    })
+    console.log('Correo de recuperación enviado a:', email)
+  } catch (error) {
+    console.error('Error enviando correo, el token generado es:', token, error.message)
+    // In dev, we just log the token so we can test it without mailer
+  }
+}
+
+export const resetPassword = async (token, newPassword) => {
+  const { rows } = await pool.query(
+    `SELECT id, usuario_id, expira_en, usado 
+     FROM sst.tokens_recuperacion 
+     WHERE token = $1`,
+    [token]
+  )
+
+  if (!rows.length) throw Object.assign(new Error('Token inválido'), { status: 400 })
+  const record = rows[0]
+
+  if (record.usado) throw Object.assign(new Error('El token ya fue utilizado'), { status: 400 })
+  if (new Date() > new Date(record.expira_en)) throw Object.assign(new Error('El token ha expirado'), { status: 400 })
+
+  const hash = await hashPassword(newPassword)
+
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    await client.query('UPDATE sst.usuarios SET password_hash = $1 WHERE id = $2', [hash, record.usuario_id])
+    await client.query('UPDATE sst.tokens_recuperacion SET usado = TRUE WHERE id = $1', [record.id])
+    await client.query('COMMIT')
+  } catch (err) {
+    await client.query('ROLLBACK')
+    throw err
+  } finally {
+    client.release()
+  }
+}
+

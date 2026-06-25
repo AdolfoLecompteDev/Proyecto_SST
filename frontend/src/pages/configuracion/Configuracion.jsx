@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { fetchConfig, saveConfig } from '../../api/configApi.js'
 import PageWrapper from '../../components/layout/PageWrapper.jsx'
 import { useAuth } from '../../hooks/useAuth.js'
 import { BellIcon, ShieldCheckIcon, SettingsIcon, UsersIcon } from '../../components/ui/Icons.jsx'
@@ -49,6 +50,27 @@ export default function Configuracion() {
   const setN = (k) => (v) => setNotif((p) => ({ ...p, [k]: v }))
   const setS = (k) => (v) => setSeg((p) => ({ ...p, [k]: v }))
   const setSis = (k) => (v) => setSistema((p) => ({ ...p, [k]: v }))
+
+  useEffect(() => {
+    fetchConfig().then(({ data }) => {
+      const conf = data?.data || {}
+      if (conf.notif) setNotif((p) => ({ ...p, ...conf.notif }))
+      if (conf.seg) setSeg((p) => ({ ...p, ...conf.seg }))
+      if (conf.sistema && esAdmin) setSistema((p) => ({ ...p, ...conf.sistema }))
+    }).catch(console.error)
+  }, [esAdmin])
+
+  const handleSave = async () => {
+    try {
+      const payload = { notif, seg }
+      if (esAdmin) payload.sistema = sistema
+      await saveConfig(payload)
+      alert('Configuración guardada exitosamente')
+    } catch (err) {
+      alert('Error guardando configuración')
+      console.error(err)
+    }
+  }
 
   return (
     <PageWrapper title="Configuración" subtitle="Preferencias del sistema y de tu cuenta.">
@@ -200,7 +222,7 @@ export default function Configuracion() {
 
           {/* Save button */}
           <div className="mt-6 flex justify-end">
-            <button className="rounded-lg bg-primary px-6 py-2.5 text-body-sm font-semibold text-on-primary hover:opacity-85">
+            <button onClick={handleSave} className="rounded-lg bg-primary px-6 py-2.5 text-body-sm font-semibold text-on-primary hover:opacity-85">
               Guardar cambios
             </button>
           </div>

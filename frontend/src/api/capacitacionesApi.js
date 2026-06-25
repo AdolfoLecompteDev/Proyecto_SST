@@ -5,3 +5,8 @@ export const fetchCapacitacionById = (id) => axiosInstance.get(`/api/capacitacio
 export const fetchCategorias = () => axiosInstance.get('/api/capacitaciones/categorias')
 export const createCapacitacion = (payload) => axiosInstance.post('/api/capacitaciones', payload)
 export const updateCapacitacion = (id, payload) => axiosInstance.put(`/api/capacitaciones/${id}`, payload)
+
+// Recursos de la ruta de estudio
+export const addRecurso = (id, payload) => axiosInstance.post(`/api/capacitaciones/${id}/recursos`, payload)
+export const updateRecurso = (id, rid, payload) => axiosInstance.put(`/api/capacitaciones/${id}/recursos/${rid}`, payload)
+export const deleteRecurso = (id, rid) => axiosInstance.delete(`/api/capacitaciones/${id}/recursos/${rid}`)

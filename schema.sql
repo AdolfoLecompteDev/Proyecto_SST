@@ -6,7 +6,7 @@
 -- ============================================================
 
 -- Conectarse a la base de datos correcta
-\c asistenciasDB;
+
 
 -- Crear schema exclusivo para este proyecto
 CREATE SCHEMA IF NOT EXISTS sst;
@@ -257,7 +257,19 @@ CREATE INDEX idx_auditoria_accion  ON sst.auditoria(accion);
 CREATE INDEX idx_auditoria_fecha   ON sst.auditoria(fecha);
 
 -- ============================================================
--- 15. SEGUIMIENTO DE CAPACITACIÓN (RF07)
+-- 15. CONFIGURACIÓN DE USUARIO
+-- ============================================================
+CREATE TABLE sst.configuracion_usuario (
+    usuario_id  INTEGER NOT NULL REFERENCES sst.usuarios(id) ON DELETE CASCADE,
+    clave       VARCHAR(100) NOT NULL,
+    valor       JSONB NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (usuario_id, clave)
+);
+
+-- ============================================================
+-- 16. SEGUIMIENTO DE CAPACITACIÓN (RF07)
 -- Vista materializada para reportes de avance
 -- ============================================================
 CREATE MATERIALIZED VIEW sst.mv_seguimiento_capacitacion AS
@@ -305,7 +317,7 @@ DO $$
 DECLARE
     t TEXT;
 BEGIN
-    FOREACH t IN ARRAY ARRAY['roles','usuarios','categorias','capacitaciones','evaluaciones']
+    FOREACH t IN ARRAY ARRAY['roles','usuarios','categorias','capacitaciones','evaluaciones','configuracion_usuario']
     LOOP
         EXECUTE format('
             CREATE TRIGGER trg_%s_updated_at
