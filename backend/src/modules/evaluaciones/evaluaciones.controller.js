@@ -36,8 +36,8 @@ export const misIntentos = async (req, res, next) => {
 
 export const createEval = async (req, res, next) => {
   try {
-    const { titulo, puntaje_minimo, max_intentos } = req.body
-    const data = await svc.createEvaluacion(Number(req.params.capacitacion_id), { titulo, puntaje_minimo, max_intentos })
+    const { titulo, puntaje_minimo, max_intentos, tipo } = req.body
+    const data = await svc.createEvaluacion(Number(req.params.capacitacion_id), { titulo, puntaje_minimo, max_intentos, tipo })
     created(res, data, 'Evaluación creada')
   } catch (e) { next(e) }
 }

@@ -1,25 +1,55 @@
 import pool from '../../config/db.js'
 
 export const getByCapacitacion = async (capacitacion_id, usuario_id) => {
+  // Obtener todas las evaluaciones con progreso del usuario
   const { rows } = await pool.query(
-    `SELECT e.id, e.titulo, e.puntaje_minimo, e.max_intentos,
+    `SELECT e.id, e.titulo, e.puntaje_minimo, e.max_intentos, e.tipo,
             COUNT(DISTINCT i.id)::int AS intentos_realizados,
             BOOL_OR(i.aprobado) AS aprobado
      FROM sst.evaluaciones e
      LEFT JOIN sst.intentos_evaluacion i ON i.evaluacion_id = e.id AND i.usuario_id = $2
      WHERE e.capacitacion_id = $1 AND e.estado = true
-     GROUP BY e.id`,
+     GROUP BY e.id
+     ORDER BY CASE e.tipo WHEN 'normal' THEN 0 ELSE 1 END, e.id`,
     [capacitacion_id, usuario_id],
   )
-  return rows
+
+  // Calcular si el quiz final está desbloqueado
+  const normales = rows.filter(e => e.tipo === 'normal')
+  const todosNormalesAprobados = normales.length === 0 || normales.every(e => e.aprobado === true)
+
+  return rows.map(e => ({
+    ...e,
+    bloqueado: e.tipo === 'final' ? !todosNormalesAprobados : false,
+  }))
 }
 
 export const getPreguntas = async (evaluacion_id, usuario_id) => {
   const { rows: ev } = await pool.query(
-    'SELECT id, titulo, puntaje_minimo, max_intentos, capacitacion_id FROM sst.evaluaciones WHERE id = $1 AND estado = true',
+    'SELECT id, titulo, puntaje_minimo, max_intentos, capacitacion_id, tipo FROM sst.evaluaciones WHERE id = $1 AND estado = true',
     [evaluacion_id],
   )
   if (!ev.length) throw Object.assign(new Error('Evaluación no encontrada'), { status: 404 })
+
+  // Si es quiz final, verificar que el usuario aprobó todos los normales
+  if (ev[0].tipo === 'final') {
+    const { rows: normales } = await pool.query(
+      `SELECT e.id,
+              BOOL_OR(i.aprobado) AS aprobado
+       FROM sst.evaluaciones e
+       LEFT JOIN sst.intentos_evaluacion i ON i.evaluacion_id = e.id AND i.usuario_id = $2
+       WHERE e.capacitacion_id = $1 AND e.tipo = 'normal' AND e.estado = true
+       GROUP BY e.id`,
+      [ev[0].capacitacion_id, usuario_id],
+    )
+    const bloqueado = normales.length > 0 && normales.some(n => !n.aprobado)
+    if (bloqueado) {
+      throw Object.assign(
+        new Error('Debes aprobar todos los quizzes de práctica antes de presentar el quiz final'),
+        { status: 403 },
+      )
+    }
+  }
 
   const { rows: intentosRows } = await pool.query(
     'SELECT COUNT(*)::int AS total FROM sst.intentos_evaluacion WHERE evaluacion_id = $1 AND usuario_id = $2',
@@ -90,18 +120,30 @@ export const submitIntento = async (evaluacion_id, usuario_id, respuestas) => {
   let certificado = null
   if (aprobado) {
     const { rows: capRow } = await pool.query(
-      'SELECT capacitacion_id FROM sst.evaluaciones WHERE id = $1',
+      'SELECT capacitacion_id, tipo FROM sst.evaluaciones WHERE id = $1',
       [evaluacion_id],
     )
     if (capRow.length) {
-      const { rows: certRow } = await pool.query(
-        `INSERT INTO sst.certificados (usuario_id, capacitacion_id, intento_id)
-         VALUES ($1,$2,$3)
-         ON CONFLICT (usuario_id, capacitacion_id) DO UPDATE SET intento_id = EXCLUDED.intento_id, fecha_emision = NOW()
-         RETURNING codigo_certificado`,
-        [usuario_id, capRow[0].capacitacion_id, intento_id],
+      const { capacitacion_id, tipo } = capRow[0]
+
+      // El certificado se emite al aprobar el quiz final.
+      // Si no existe ningún quiz final para esta capacitación, se emite en cualquier aprobación.
+      const { rows: hayFinal } = await pool.query(
+        `SELECT id FROM sst.evaluaciones WHERE capacitacion_id = $1 AND tipo = 'final' AND estado = true LIMIT 1`,
+        [capacitacion_id],
       )
-      certificado = certRow[0]?.codigo_certificado
+      const debeCertificar = tipo === 'final' || hayFinal.length === 0
+
+      if (debeCertificar) {
+        const { rows: certRow } = await pool.query(
+          `INSERT INTO sst.certificados (usuario_id, capacitacion_id, intento_id)
+           VALUES ($1,$2,$3)
+           ON CONFLICT (usuario_id, capacitacion_id) DO UPDATE SET intento_id = EXCLUDED.intento_id, fecha_emision = NOW()
+           RETURNING codigo_certificado`,
+          [usuario_id, capacitacion_id, intento_id],
+        )
+        certificado = certRow[0]?.codigo_certificado
+      }
     }
   }
 
@@ -124,27 +166,30 @@ export const getMisIntentos = async (usuario_id) => {
 
 // ─── Admin: gestión de evaluaciones y preguntas ───────────────────────────────
 
-export const createEvaluacion = async (capacitacion_id, { titulo, puntaje_minimo, max_intentos }) => {
+export const createEvaluacion = async (capacitacion_id, { titulo, puntaje_minimo, max_intentos, tipo = 'normal' }) => {
   if (!titulo) throw Object.assign(new Error('El título es requerido'), { status: 400 })
+  if (!['normal', 'final'].includes(tipo)) throw Object.assign(new Error('Tipo de evaluación inválido'), { status: 400 })
 
-  // Solo una evaluación activa por capacitación
-  const { rows: existing } = await pool.query(
-    'SELECT id FROM sst.evaluaciones WHERE capacitacion_id = $1 AND estado = true',
-    [capacitacion_id],
-  )
-  if (existing.length) throw Object.assign(new Error('Ya existe una evaluación activa para esta capacitación'), { status: 409 })
+  // Si es quiz final, solo puede haber uno por capacitación (garantizado también por índice único en BD)
+  if (tipo === 'final') {
+    const { rows: existing } = await pool.query(
+      `SELECT id FROM sst.evaluaciones WHERE capacitacion_id = $1 AND tipo = 'final' AND estado = true`,
+      [capacitacion_id],
+    )
+    if (existing.length) throw Object.assign(new Error('Ya existe un quiz final para esta capacitación'), { status: 409 })
+  }
 
   const { rows } = await pool.query(
-    `INSERT INTO sst.evaluaciones (capacitacion_id, titulo, puntaje_minimo, max_intentos)
-     VALUES ($1,$2,$3,$4) RETURNING id, titulo, puntaje_minimo, max_intentos`,
-    [capacitacion_id, titulo, puntaje_minimo ?? 70, max_intentos ?? 3],
+    `INSERT INTO sst.evaluaciones (capacitacion_id, titulo, puntaje_minimo, max_intentos, tipo)
+     VALUES ($1,$2,$3,$4,$5) RETURNING id, titulo, puntaje_minimo, max_intentos, tipo`,
+    [capacitacion_id, titulo, puntaje_minimo ?? 70, max_intentos ?? 3, tipo],
   )
   return rows[0]
 }
 
 export const getEvaluacionAdmin = async (evaluacion_id) => {
   const { rows: ev } = await pool.query(
-    'SELECT id, titulo, puntaje_minimo, max_intentos FROM sst.evaluaciones WHERE id = $1',
+    'SELECT id, titulo, puntaje_minimo, max_intentos, tipo FROM sst.evaluaciones WHERE id = $1',
     [evaluacion_id],
   )
   if (!ev.length) throw Object.assign(new Error('Evaluación no encontrada'), { status: 404 })

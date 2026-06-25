@@ -46,7 +46,7 @@ export const getById = async (id) => {
     [id],
   )
   const { rows: evals } = await pool.query(
-    'SELECT id, titulo, puntaje_minimo, max_intentos FROM sst.evaluaciones WHERE capacitacion_id = $1 AND estado = true',
+    'SELECT id, titulo, puntaje_minimo, max_intentos, tipo FROM sst.evaluaciones WHERE capacitacion_id = $1 AND estado = true ORDER BY CASE tipo WHEN \'normal\' THEN 0 ELSE 1 END, id ASC',
     [id],
   )
 

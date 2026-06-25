@@ -4,10 +4,11 @@ import PageWrapper from '../../components/layout/PageWrapper.jsx'
 import {
   PlayIcon, FileTextIcon, DownloadIcon, CheckCircleIcon,
   ClockIcon, PlusIcon, XIcon, BookOpenIcon, ChevronRightIcon,
-  GraduationCapIcon, PencilIcon, ZapIcon, ClipboardIcon,
+  GraduationCapIcon, PencilIcon, ZapIcon, ClipboardIcon, LockIcon,
 } from '../../components/ui/Icons.jsx'
 import { fetchCapacitacionById } from '../../api/capacitacionesApi.js'
 import { addRecurso, deleteRecurso, updateRecurso } from '../../api/capacitacionesApi.js'
+import { fetchEvaluacionesByCapacitacion } from '../../api/evaluacionesApi.js'
 import { AuthContext } from '../../context/AuthContext.jsx'
 
 // ─── Icon & label per resource type ───────────────────────────────────────────
@@ -254,7 +255,23 @@ export default function DetalleCapacitacion() {
   const reload = async () => {
     try {
       const res = await fetchCapacitacionById(id)
-      setCurso(res.data.data)
+      const cap = res.data.data
+
+      // Si es funcionario, enriquecer las evaluaciones con el flag `bloqueado`
+      let evaluacionesConBloqueo = cap.evaluaciones ?? []
+      if (cap.evaluaciones?.length) {
+        try {
+          const evRes = await fetchEvaluacionesByCapacitacion(id)
+          const evConBloqueo = evRes.data.data ?? []
+          // Merge bloqueado flag
+          evaluacionesConBloqueo = cap.evaluaciones.map(e => {
+            const enriched = evConBloqueo.find(ev => ev.id === e.id)
+            return enriched ? { ...e, bloqueado: enriched.bloqueado ?? false } : e
+          })
+        } catch { /* Usar evaluaciones sin bloqueo si falla */ }
+      }
+
+      setCurso({ ...cap, evaluaciones: evaluacionesConBloqueo })
     } catch {
       setError('No se pudo cargar la capacitación')
     } finally {
@@ -303,7 +320,10 @@ export default function DetalleCapacitacion() {
     )
   }
 
-  const primerEval = curso.evaluaciones?.[0]
+  const evaluaciones = curso.evaluaciones ?? []
+  const normales = evaluaciones.filter(e => !e.tipo || e.tipo === 'normal')
+  const finalEval = evaluaciones.find(e => e.tipo === 'final')
+  const primerNormal = normales[0] ?? null
   const archivos = curso.archivos ?? []
   const activeRecurso = archivos.find(a => a.id === activeRecursoId) || archivos[0]
 
@@ -318,15 +338,7 @@ export default function DetalleCapacitacion() {
               onClick={() => navigate(`/capacitaciones/${id}/quiz`)}
               style={{ ...btnSecondaryStyle, display: 'flex', alignItems: 'center', gap: 6 }}
             >
-              <ZapIcon size={14} /> Gestionar Quiz
-            </button>
-          )}
-          {primerEval && (
-            <button
-              onClick={() => navigate(`/evaluaciones/${primerEval.id}/preguntas`)}
-              style={{ ...btnPrimaryStyle, display: 'flex', alignItems: 'center', gap: 6 }}
-            >
-              <GraduationCapIcon size={14} /> Presentar Evaluación
+              <ZapIcon size={14} /> Gestionar Quizzes
             </button>
           )}
         </div>
@@ -466,23 +478,92 @@ export default function DetalleCapacitacion() {
               </div>
             </div>
 
-            {/* Quiz CTA */}
-            {primerEval ? (
+            {/* Quiz section in sidebar */}
+            {evaluaciones.length > 0 ? (
               <div style={{
-                borderRadius: 16, border: '1px solid rgba(var(--color-secondary-rgb, 59,130,246),.3)',
-                background: 'rgba(var(--color-secondary-rgb, 59,130,246),.06)', padding: 20,
+                borderRadius: 16, border: '1px solid var(--color-outline-variant)',
+                background: 'var(--color-surface-container-lowest)', padding: 20,
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <CheckCircleIcon size={16} style={{ color: 'var(--color-secondary)' }} />
-                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-on-surface)' }}>Evaluación disponible</span>
-                </div>
-                <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--color-on-surface-variant)' }}>
-                  Puntaje mínimo: <strong>{primerEval.puntaje_minimo}%</strong> · Intentos: <strong>{primerEval.max_intentos}</strong>
+                <p style={{ margin: '0 0 12px', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--color-on-surface-variant)' }}>
+                  Evaluaciones
                 </p>
-                <button onClick={() => navigate(`/evaluaciones/${primerEval.id}/preguntas`)}
-                  style={{ ...btnPrimaryStyle, width: '100%', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <GraduationCapIcon size={14} /> Presentar evaluación
-                </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {normales.map(ev => (
+                    <div key={ev.id} style={{
+                      padding: '10px 12px', borderRadius: 10,
+                      border: '1px solid rgba(var(--color-primary-rgb, 59,130,246),.25)',
+                      background: 'rgba(var(--color-primary-rgb, 59,130,246),.04)',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                        <ZapIcon size={12} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-primary)', letterSpacing: '0.06em' }}>PRÁCTICA</span>
+                      </div>
+                      <p style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 600, color: 'var(--color-on-surface)' }}>{ev.titulo}</p>
+                      <p style={{ margin: '0 0 10px', fontSize: 11, color: 'var(--color-on-surface-variant)' }}>
+                        Mín. {ev.puntaje_minimo}% · {ev.max_intentos} intentos
+                      </p>
+                      {!isAdmin && (
+                        <button onClick={() => navigate(`/evaluaciones/${ev.id}/preguntas`)}
+                          style={{ ...btnPrimaryStyle, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 14px', fontSize: 12 }}>
+                          <ZapIcon size={12} /> Presentar quiz
+                        </button>
+                      )}
+                    </div>
+                  ))}
+
+                  {finalEval && (
+                    <>
+                      {normales.length > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
+                          <div style={{ flex: 1, height: 1, background: 'var(--color-outline-variant)' }} />
+                          <span style={{ fontSize: 10, color: 'var(--color-on-surface-variant)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Final</span>
+                          <div style={{ flex: 1, height: 1, background: 'var(--color-outline-variant)' }} />
+                        </div>
+                      )}
+                      <div style={{
+                        padding: '10px 12px', borderRadius: 10,
+                        border: `1px solid ${finalEval.bloqueado ? 'var(--color-outline-variant)' : 'rgba(0,108,73,.4)'}`,
+                        background: finalEval.bloqueado ? 'var(--color-surface-container-low)' : 'rgba(0,108,73,.06)',
+                        opacity: finalEval.bloqueado ? 0.8 : 1,
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                          {finalEval.bloqueado
+                            ? <LockIcon size={12} style={{ color: 'var(--color-on-surface-variant)', flexShrink: 0 }} />
+                            : <GraduationCapIcon size={12} style={{ color: '#006c49', flexShrink: 0 }} />}
+                          <span style={{ fontSize: 11, fontWeight: 700, color: finalEval.bloqueado ? 'var(--color-on-surface-variant)' : '#006c49', letterSpacing: '0.06em' }}>QUIZ FINAL</span>
+                        </div>
+                        <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 600, color: finalEval.bloqueado ? 'var(--color-on-surface-variant)' : 'var(--color-on-surface)' }}>
+                          {finalEval.titulo}
+                        </p>
+                        {finalEval.bloqueado && !isAdmin && (
+                          <p style={{ margin: '0 0 8px', fontSize: 11, color: 'var(--color-on-surface-variant)', lineHeight: 1.4 }}>
+                            🔒 Aprueba todos los quizzes de práctica para desbloquearlo.
+                          </p>
+                        )}
+                        {!finalEval.bloqueado && (
+                          <p style={{ margin: '0 0 8px', fontSize: 11, color: 'var(--color-on-surface-variant)' }}>
+                            Mín. {finalEval.puntaje_minimo}% · {finalEval.max_intentos} intentos
+                          </p>
+                        )}
+                        {!isAdmin && (
+                          <button
+                            onClick={() => !finalEval.bloqueado && navigate(`/evaluaciones/${finalEval.id}/preguntas`)}
+                            disabled={finalEval.bloqueado}
+                            style={{
+                              ...btnPrimaryStyle,
+                              background: finalEval.bloqueado ? 'var(--color-outline-variant)' : '#006c49',
+                              color: finalEval.bloqueado ? 'var(--color-on-surface-variant)' : '#fff',
+                              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              gap: 6, padding: '8px 14px', fontSize: 12, cursor: finalEval.bloqueado ? 'not-allowed' : 'pointer',
+                            }}
+                          >
+                            {finalEval.bloqueado ? <><LockIcon size={12} /> Bloqueado</> : <><GraduationCapIcon size={12} /> Presentar quiz final</>}
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             ) : isAdmin ? (
               <div style={{
@@ -490,10 +571,10 @@ export default function DetalleCapacitacion() {
                 padding: 20, textAlign: 'center',
               }}>
                 <ZapIcon size={28} style={{ color: 'var(--color-on-surface-variant)', opacity: 0.4, display: 'block', margin: '0 auto 8px' }} />
-                <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--color-on-surface-variant)' }}>No hay quiz todavía</p>
+                <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--color-on-surface-variant)' }}>No hay quizzes todavía</p>
                 <button onClick={() => navigate(`/capacitaciones/${id}/quiz`)}
                   style={{ ...btnPrimaryStyle, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                  <PlusIcon size={14} /> Crear Quiz
+                  <PlusIcon size={14} /> Crear Quizzes
                 </button>
               </div>
             ) : null}
