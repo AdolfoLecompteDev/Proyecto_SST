@@ -1,5 +1,19 @@
 import { ok, fail } from '../../utils/response.js'
-import { getConfig, setConfig } from './config.service.js'
+import { getConfig, setConfig, getSistema, setSistema } from './config.service.js'
+
+export const getPublicConfig = async (_req, res, next) => {
+  try {
+    const data = await getSistema()
+    ok(res, data)
+  } catch (err) { next(err) }
+}
+
+export const updateSistema = async (req, res, next) => {
+  try {
+    const data = await setSistema(req.body)
+    ok(res, data, 'Configuración del sistema guardada')
+  } catch (err) { next(err) }
+}
 
 export const getUserConfig = async (req, res, next) => {
   try {

@@ -31,6 +31,16 @@ export const update = async (req, res, next) => {
   } catch (e) { next(e) }
 }
 
+export const destroy = async (req, res, next) => {
+  try {
+    await svc.deleteCapacitacion(Number(req.params.id))
+    ok(res, null, 'Capacitación eliminada')
+  } catch (e) {
+    if (e.status) return fail(res, e.message, e.status)
+    next(e)
+  }
+}
+
 export const categorias = async (req, res, next) => {
   try {
     const data = await svc.getCategorias()
@@ -57,5 +67,19 @@ export const removeRecurso = async (req, res, next) => {
   try {
     await svc.deleteRecurso(Number(req.params.id), Number(req.params.rid))
     ok(res, null, 'Recurso eliminado')
+  } catch (e) { next(e) }
+}
+
+export const marcarVisto = async (req, res, next) => {
+  try {
+    await svc.marcarVisto(req.user.id, Number(req.params.rid))
+    ok(res, null, 'Recurso marcado como visto')
+  } catch (e) { next(e) }
+}
+
+export const miProgreso = async (req, res, next) => {
+  try {
+    const data = await svc.getMiProgreso(Number(req.params.id), req.user.id)
+    ok(res, data)
   } catch (e) { next(e) }
 }

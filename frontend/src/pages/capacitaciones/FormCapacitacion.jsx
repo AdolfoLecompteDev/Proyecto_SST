@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import PageWrapper from '../../components/layout/PageWrapper.jsx'
-import { fetchCategorias, createCapacitacion } from '../../api/capacitacionesApi.js'
+import { fetchCategorias, createCapacitacion, updateCapacitacion, fetchCapacitacionById } from '../../api/capacitacionesApi.js'
 import {
   FlameIcon, HeartPulseIcon, WrenchIcon, BookOpenIcon, HardHatIcon, GraduationCapIcon,
 } from '../../components/ui/Icons.jsx'
@@ -16,6 +16,8 @@ const catIcons = {
 
 export default function FormCapacitacion() {
   const navigate = useNavigate()
+  const { id } = useParams()
+  const esEdicion = Boolean(id)
 
   const [form, setForm] = useState({
     titulo: '',
@@ -32,7 +34,20 @@ export default function FormCapacitacion() {
     fetchCategorias()
       .then((res) => setCategorias(res.data.data || []))
       .catch(() => {})
-  }, [])
+    if (esEdicion) {
+      fetchCapacitacionById(id)
+        .then(res => {
+          const cap = res.data.data
+          setForm({
+            titulo: cap.titulo || '',
+            descripcion: cap.descripcion || '',
+            categoria_id: cap.categoria_id ? String(cap.categoria_id) : '',
+            fecha_vigencia: cap.fecha_vigencia ? cap.fecha_vigencia.slice(0, 10) : '',
+          })
+        })
+        .catch(() => setApiError('No se pudo cargar la capacitación'))
+    }
+  }, [id])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -52,16 +67,22 @@ export default function FormCapacitacion() {
     if (Object.keys(errs).length) { setErrores(errs); return }
     setLoading(true)
     setApiError('')
+    const payload = {
+      titulo: form.titulo,
+      descripcion: form.descripcion || null,
+      categoria_id: form.categoria_id ? Number(form.categoria_id) : null,
+      fecha_vigencia: form.fecha_vigencia || null,
+    }
     try {
-      await createCapacitacion({
-        titulo: form.titulo,
-        descripcion: form.descripcion || null,
-        categoria_id: form.categoria_id ? Number(form.categoria_id) : null,
-        fecha_vigencia: form.fecha_vigencia || null,
-      })
-      navigate('/capacitaciones')
+      if (esEdicion) {
+        await updateCapacitacion(id, payload)
+        navigate(`/capacitaciones/${id}`)
+      } else {
+        await createCapacitacion(payload)
+        navigate('/capacitaciones')
+      }
     } catch (err) {
-      setApiError(err?.response?.data?.message || 'Error al crear la capacitación')
+      setApiError(err?.response?.data?.message || `Error al ${esEdicion ? 'actualizar' : 'crear'} la capacitación`)
     } finally {
       setLoading(false)
     }
@@ -71,7 +92,10 @@ export default function FormCapacitacion() {
   const CatIcon = catSeleccionada ? (catIcons[catSeleccionada.nombre] || GraduationCapIcon) : GraduationCapIcon
 
   return (
-    <PageWrapper title="Nueva Capacitación" subtitle="Agrega un nuevo módulo al catálogo de formación.">
+    <PageWrapper
+      title={esEdicion ? 'Editar Capacitación' : 'Nueva Capacitación'}
+      subtitle={esEdicion ? 'Modifica los datos del módulo de formación.' : 'Agrega un nuevo módulo al catálogo de formación.'}
+    >
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         {/* Main form */}
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -152,7 +176,7 @@ export default function FormCapacitacion() {
           <div className="flex items-center justify-end gap-3">
             <button
               type="button"
-              onClick={() => navigate('/capacitaciones')}
+              onClick={() => esEdicion ? navigate(`/capacitaciones/${id}`) : navigate('/capacitaciones')}
               className="rounded-lg border border-outline px-6 py-2.5 text-body-sm font-medium text-on-surface hover:bg-surface-container-low"
             >
               Cancelar
@@ -162,7 +186,7 @@ export default function FormCapacitacion() {
               disabled={loading}
               className="rounded-lg bg-primary px-6 py-2.5 text-body-sm font-semibold text-on-primary hover:opacity-85 disabled:opacity-60"
             >
-              {loading ? 'Creando...' : 'Crear capacitación'}
+              {loading ? (esEdicion ? 'Guardando...' : 'Creando...') : (esEdicion ? 'Guardar cambios' : 'Crear capacitación')}
             </button>
           </div>
         </form>

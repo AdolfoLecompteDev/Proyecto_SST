@@ -5,9 +5,9 @@ import {
   PlayIcon, FileTextIcon, DownloadIcon, CheckCircleIcon,
   ClockIcon, PlusIcon, XIcon, BookOpenIcon, ChevronRightIcon,
   GraduationCapIcon, PencilIcon, ZapIcon, ClipboardIcon, LockIcon,
+  ChevronDownIcon,
 } from '../../components/ui/Icons.jsx'
-import { fetchCapacitacionById } from '../../api/capacitacionesApi.js'
-import { addRecurso, deleteRecurso, updateRecurso } from '../../api/capacitacionesApi.js'
+import { fetchCapacitacionById, addRecurso, deleteRecurso, updateRecurso, fetchMiProgreso, marcarRecursoVisto, deleteCapacitacion } from '../../api/capacitacionesApi.js'
 import { fetchEvaluacionesByCapacitacion } from '../../api/evaluacionesApi.js'
 import { AuthContext } from '../../context/AuthContext.jsx'
 
@@ -43,7 +43,7 @@ function getThumbnailUrl(url = '') {
 }
 
 // ─── Single resource card ──────────────────────────────────────────────────────
-function RecursoCard({ recurso, index, isAdmin, onDelete, loading }) {
+function RecursoCard({ recurso, index, isAdmin, onDelete, loading, visto, onVisto }) {
   const [deleting, setDeleting] = useState(false)
   const meta = TIPO_META[recurso.tipo] ?? TIPO_META.enlace
   const { Icon } = meta
@@ -59,7 +59,7 @@ function RecursoCard({ recurso, index, isAdmin, onDelete, loading }) {
     <div style={{ border: '1px solid var(--color-outline-variant)', borderRadius: 16, overflow: 'hidden', background: 'var(--color-surface-container-lowest)' }}>
       {/* Embed para videos de YouTube/Vimeo */}
       {embedUrl && (
-        <div style={{ background: '#000' }}>
+        <div style={{ background: '#000' }} onClick={() => !isAdmin && onVisto && onVisto(recurso.id)}>
           <iframe
             src={embedUrl}
             title={recurso.nombre_original}
@@ -102,7 +102,12 @@ function RecursoCard({ recurso, index, isAdmin, onDelete, loading }) {
             <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--color-on-surface-variant)', lineHeight: '1.5' }}>{recurso.descripcion}</p>
           )}
         </div>
-        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0, alignItems: 'center' }}>
+          {!isAdmin && visto && (
+            <span title="Visto" style={{ display: 'flex', alignItems: 'center', color: '#16a34a' }}>
+              <CheckCircleIcon size={18} />
+            </span>
+          )}
           {isAdmin && (
             <button onClick={handleDelete} disabled={deleting || loading}
               title="Eliminar recurso"
@@ -119,6 +124,7 @@ function RecursoCard({ recurso, index, isAdmin, onDelete, loading }) {
           )}
           {recurso.tipo !== 'video' && recurso.tipo !== 'video_url' && (
             <a href={recurso.url} target="_blank" rel="noreferrer"
+              onClick={() => !isAdmin && onVisto && onVisto(recurso.id)}
               style={{
                 height: 32, padding: '0 14px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 6,
                 background: meta.color, color: '#fff', fontSize: 12, fontWeight: 600, textDecoration: 'none',
@@ -133,6 +139,61 @@ function RecursoCard({ recurso, index, isAdmin, onDelete, loading }) {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+// ─── Tipo options ──────────────────────────────────────────────────────────────
+const TIPO_OPTIONS = [
+  { value: 'video_url', label: 'Video (YouTube / URL)', Icon: PlayIcon,     color: '#e74c3c' },
+  { value: 'video',     label: 'Video (archivo directo)',Icon: PlayIcon,     color: '#e74c3c' },
+  { value: 'pdf',       label: 'PDF',                   Icon: FileTextIcon,  color: '#e67e22' },
+  { value: 'docx',      label: 'DOCX / Word',           Icon: FileTextIcon,  color: '#2980b9' },
+  { value: 'enlace',    label: 'Enlace externo',        Icon: BookOpenIcon,  color: '#8e44ad' },
+]
+
+function TipoSelect({ value, onChange }) {
+  const [open, setOpen] = useState(false)
+  const selected = TIPO_OPTIONS.find(o => o.value === value) || TIPO_OPTIONS[0]
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <button type="button" onClick={() => setOpen(p => !p)} style={{
+        ...inputStyle, display: 'flex', alignItems: 'center', gap: 8,
+        cursor: 'pointer', justifyContent: 'space-between',
+      }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <selected.Icon size={15} style={{ color: selected.color, flexShrink: 0 }} />
+          <span>{selected.label}</span>
+        </span>
+        <ChevronDownIcon size={14} style={{ color: 'var(--color-on-surface-variant)', flexShrink: 0, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} />
+      </button>
+      {open && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+          marginTop: 4, borderRadius: 10, border: '1px solid var(--color-outline)',
+          background: 'var(--color-surface)', boxShadow: '0 8px 24px rgba(0,0,0,.12)',
+          overflow: 'hidden',
+        }}>
+          {TIPO_OPTIONS.map(opt => (
+            <button key={opt.value} type="button"
+              onClick={() => { onChange(opt.value); setOpen(false) }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                padding: '10px 14px', border: 'none',
+                background: opt.value === value ? 'var(--color-surface-container)' : 'var(--color-surface)',
+                cursor: 'pointer', textAlign: 'left', fontSize: 13, color: 'var(--color-on-surface)',
+                transition: 'background .1s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-surface-container)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = opt.value === value ? 'var(--color-surface-container)' : 'var(--color-surface)' }}
+            >
+              <opt.Icon size={15} style={{ color: opt.color, flexShrink: 0 }} />
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -187,13 +248,7 @@ function FormAgregarRecurso({ capacitacionId, onAdded }) {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div>
             <label style={labelStyle}>Tipo</label>
-            <select value={form.tipo} onChange={e => setForm(p => ({ ...p, tipo: e.target.value }))} style={inputStyle}>
-              <option value="video_url">🎬 Video (YouTube / URL)</option>
-              <option value="video">🎥 Video (archivo directo)</option>
-              <option value="pdf">📄 PDF</option>
-              <option value="docx">📝 DOCX / Word</option>
-              <option value="enlace">🔗 Enlace externo</option>
-            </select>
+            <TipoSelect value={form.tipo} onChange={v => setForm(p => ({ ...p, tipo: v }))} />
           </div>
           <div>
             <label style={labelStyle}>Nombre del recurso *</label>
@@ -251,6 +306,7 @@ export default function DetalleCapacitacion() {
   const [tab, setTab] = useState('ruta') // 'ruta' | 'info'
   const [deletingId, setDeletingId] = useState(null)
   const [activeRecursoId, setActiveRecursoId] = useState(null)
+  const [visitados, setVisitados] = useState(new Set())
 
   const reload = async () => {
     try {
@@ -279,7 +335,20 @@ export default function DetalleCapacitacion() {
     }
   }
 
-  useEffect(() => { reload() }, [id])
+  useEffect(() => {
+    reload()
+    if (!isAdmin) {
+      fetchMiProgreso(id)
+        .then(res => setVisitados(new Set(res.data.data)))
+        .catch(() => {})
+    }
+  }, [id])
+
+  const handleVisto = (rid) => {
+    if (visitados.has(rid)) return
+    setVisitados(prev => new Set([...prev, rid]))
+    marcarRecursoVisto(id, rid).catch(() => {})
+  }
 
   const handleDeleteRecurso = async (rid) => {
     setDeletingId(rid)
@@ -288,6 +357,16 @@ export default function DetalleCapacitacion() {
       setCurso(prev => ({ ...prev, archivos: prev.archivos.filter(a => a.id !== rid) }))
     } catch { /* silencioso */ } finally {
       setDeletingId(null)
+    }
+  }
+
+  const handleEliminarCapacitacion = async () => {
+    if (!window.confirm(`¿Eliminar "${curso.titulo}"? Esta acción no se puede deshacer.`)) return
+    try {
+      await deleteCapacitacion(id)
+      navigate('/capacitaciones')
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error al eliminar')
     }
   }
 
@@ -326,6 +405,7 @@ export default function DetalleCapacitacion() {
   const primerNormal = normales[0] ?? null
   const archivos = curso.archivos ?? []
   const activeRecurso = archivos.find(a => a.id === activeRecursoId) || archivos[0]
+  const progresoPct = archivos.length > 0 ? Math.round((visitados.size / archivos.length) * 100) : 0
 
   return (
     <PageWrapper
@@ -334,12 +414,26 @@ export default function DetalleCapacitacion() {
       actions={
         <div style={{ display: 'flex', gap: 10 }}>
           {isAdmin && (
-            <button
-              onClick={() => navigate(`/capacitaciones/${id}/quiz`)}
-              style={{ ...btnSecondaryStyle, display: 'flex', alignItems: 'center', gap: 6 }}
-            >
-              <ZapIcon size={14} /> Gestionar Quizzes
-            </button>
+            <>
+              <button
+                onClick={() => navigate(`/capacitaciones/${id}/editar`)}
+                style={{ ...btnSecondaryStyle, display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                <PencilIcon size={14} /> Editar
+              </button>
+              <button
+                onClick={handleEliminarCapacitacion}
+                style={{ ...btnSecondaryStyle, display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-error)', borderColor: 'var(--color-error)' }}
+              >
+                <XIcon size={14} /> Eliminar
+              </button>
+              <button
+                onClick={() => navigate(`/capacitaciones/${id}/quiz`)}
+                style={{ ...btnSecondaryStyle, display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                <ZapIcon size={14} /> Gestionar Quizzes
+              </button>
+            </>
           )}
         </div>
       }
@@ -388,6 +482,8 @@ export default function DetalleCapacitacion() {
                   isAdmin={isAdmin}
                   onDelete={handleDeleteRecurso}
                   loading={deletingId === activeRecurso.id}
+                  visto={visitados.has(activeRecurso.id)}
+                  onVisto={handleVisto}
                 />
               )}
 
@@ -408,9 +504,32 @@ export default function DetalleCapacitacion() {
               borderRadius: 16, border: '1px solid var(--color-outline-variant)',
               background: 'var(--color-surface-container-lowest)', padding: 20,
             }}>
-              <p style={{ margin: '0 0 12px', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--color-on-surface-variant)' }}>
-                Contenido
-              </p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--color-on-surface-variant)' }}>
+                  Contenido
+                </p>
+                {!isAdmin && archivos.length > 0 && (
+                  <span style={{ fontSize: 11, fontWeight: 700, color: progresoPct === 100 ? '#16a34a' : 'var(--color-primary)' }}>
+                    {visitados.size}/{archivos.length}
+                  </span>
+                )}
+              </div>
+              {!isAdmin && archivos.length > 0 && (
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ height: 6, borderRadius: 99, background: 'var(--color-surface-container-high)', overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%', borderRadius: 99, transition: 'width .4s ease',
+                      width: `${progresoPct}%`,
+                      background: progresoPct === 100 ? '#16a34a' : 'var(--color-primary)',
+                    }} />
+                  </div>
+                  {progresoPct === 100 && (
+                    <p style={{ margin: '6px 0 0', fontSize: 11, color: '#16a34a', fontWeight: 600 }}>
+                      ✓ Contenido completado
+                    </p>
+                  )}
+                </div>
+              )}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {archivos.length === 0 ? (
                   <p style={{ margin: 0, fontSize: 13, color: 'var(--color-on-surface-variant)' }}>Sin recursos aún</p>
@@ -421,9 +540,9 @@ export default function DetalleCapacitacion() {
                   const isVideo = a.tipo === 'video' || a.tipo === 'video_url'
 
                   return (
-                    <div 
+                    <div
                       key={a.id}
-                      onClick={() => setActiveRecursoId(a.id)}
+                      onClick={() => { setActiveRecursoId(a.id); if (!isAdmin) handleVisto(a.id) }}
                       style={{ 
                         display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer',
                         padding: '10px 12px', borderRadius: 12, margin: '0 -12px',
@@ -459,9 +578,14 @@ export default function DetalleCapacitacion() {
                       )}
                       
                       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, paddingTop: 2 }}>
-                        <span style={{ fontSize: 13, color: isActive ? 'var(--color-primary)' : 'var(--color-on-surface)', fontWeight: isActive ? 600 : 500, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: '1.4' }}>
-                          {i + 1}. {a.nombre_original}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ fontSize: 13, color: isActive ? 'var(--color-primary)' : 'var(--color-on-surface)', fontWeight: isActive ? 600 : 500, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: '1.4', flex: 1 }}>
+                            {i + 1}. {a.nombre_original}
+                          </span>
+                          {!isAdmin && visitados.has(a.id) && (
+                            <CheckCircleIcon size={14} style={{ color: '#16a34a', flexShrink: 0 }} />
+                          )}
+                        </div>
                         {a.descripcion ? (
                           <span style={{ fontSize: 11, color: 'var(--color-on-surface-variant)', marginTop: 4, display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                             {a.descripcion}
@@ -596,7 +720,7 @@ export default function DetalleCapacitacion() {
                 ['Vigente hasta', curso.fecha_vigencia ? new Date(curso.fecha_vigencia).toLocaleDateString('es-CO') : '—'],
                 ['Creado por', curso.creado_por || '—'],
                 ['Recursos', `${archivos.length} recurso(s)`],
-                ['Evaluación', primerEval ? primerEval.titulo : 'Sin evaluación'],
+                ['Evaluación', primerNormal ? primerNormal.titulo : 'Sin evaluación'],
               ].map(([k, v]) => (
                 <div key={k}>
                   <dt style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>{k}</dt>

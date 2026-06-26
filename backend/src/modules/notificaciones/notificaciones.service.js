@@ -59,12 +59,17 @@ export const getNotificaciones = async (usuario_id) => {
     })
   }
 
-  // Nuevas capacitaciones publicadas (últimos 14 días)
+  // Nuevas capacitaciones publicadas (últimos 14 días) que el usuario no ha completado
   const { rows: nuevas } = await pool.query(
     `SELECT c.id, c.titulo, c.created_at
      FROM sst.capacitaciones c
      WHERE c.estado = true AND c.created_at >= NOW() - INTERVAL '14 days'
+       AND NOT EXISTS (
+         SELECT 1 FROM sst.certificados cert
+         WHERE cert.capacitacion_id = c.id AND cert.usuario_id = $1
+       )
      ORDER BY c.created_at DESC LIMIT 3`,
+    [usuario_id],
   )
   for (const r of nuevas) {
     notifs.push({

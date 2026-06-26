@@ -41,6 +41,22 @@ export default function ReporteSeguimiento() {
     }
   }
 
+  const handleExportCSV = () => {
+    const headers = ['Nombre', 'Email', 'Completadas', 'Total', 'Porcentaje (%)', 'Estado']
+    const rows = empleados.map(e => {
+      const estado = calcEstado(e)
+      return [e.nombre_completo, e.email, e.completadas, e.total, e.porcentaje, estado]
+    })
+    const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `seguimiento-${new Date().toISOString().slice(0,10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const handleRefreshData = async () => {
     try {
       setLoading(true)
@@ -76,7 +92,8 @@ export default function ReporteSeguimiento() {
             className="flex items-center gap-1.5 rounded-lg border border-outline-variant px-3 py-2.5 text-body-sm text-on-surface-variant hover:bg-surface-container-low disabled:opacity-50">
             <RefreshIcon size={14} className={loading ? 'animate-spin' : ''} />
           </button>
-          <button className="flex items-center gap-2 rounded-lg border border-outline px-4 py-2.5 text-body-sm font-medium text-on-surface hover:bg-surface-container-low">
+          <button onClick={handleExportCSV} disabled={loading || empleados.length === 0}
+            className="flex items-center gap-2 rounded-lg border border-outline px-4 py-2.5 text-body-sm font-medium text-on-surface hover:bg-surface-container-low disabled:opacity-50">
             <DownloadIcon size={15} /> Exportar CSV
           </button>
         </div>

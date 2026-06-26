@@ -15,7 +15,9 @@ export const getAll = async ({ search = '', categoria_id = null, estado = null }
     SELECT c.id, c.titulo, c.descripcion, c.fecha_inicio, c.fecha_vigencia, c.estado,
            cat.nombre AS categoria,
            u.nombre || ' ' || u.apellido AS creado_por,
-           (SELECT COUNT(*) FROM sst.evaluaciones e WHERE e.capacitacion_id = c.id)::int AS num_evaluaciones
+           (SELECT COUNT(*) FROM sst.evaluaciones e WHERE e.capacitacion_id = c.id)::int AS num_evaluaciones,
+           (SELECT COUNT(*) FROM sst.archivos_capacitacion a WHERE a.capacitacion_id = c.id)::int AS num_recursos,
+           (SELECT COUNT(*) FROM sst.certificados cert WHERE cert.capacitacion_id = c.id)::int AS num_certificados
     FROM sst.capacitaciones c
     LEFT JOIN sst.categorias cat ON cat.id = c.categoria_id
     LEFT JOIN sst.usuarios u ON u.id = c.creado_por
@@ -28,6 +30,7 @@ export const getAll = async ({ search = '', categoria_id = null, estado = null }
 export const getById = async (id) => {
   const { rows } = await pool.query(`
     SELECT c.id, c.titulo, c.descripcion, c.fecha_inicio, c.fecha_vigencia, c.estado,
+           c.categoria_id,
            cat.nombre AS categoria,
            u.nombre || ' ' || u.apellido AS creado_por
     FROM sst.capacitaciones c
@@ -130,10 +133,34 @@ export const updateRecurso = async (capacitacion_id, recurso_id, fields) => {
   return rows[0]
 }
 
+export const deleteCapacitacion = async (id) => {
+  const { rowCount } = await pool.query('DELETE FROM sst.capacitaciones WHERE id = $1', [id])
+  if (!rowCount) throw Object.assign(new Error('Capacitación no encontrada'), { status: 404 })
+}
+
 export const deleteRecurso = async (capacitacion_id, recurso_id) => {
   const { rowCount } = await pool.query(
     'DELETE FROM sst.archivos_capacitacion WHERE id = $1 AND capacitacion_id = $2',
     [recurso_id, capacitacion_id],
   )
   if (!rowCount) throw Object.assign(new Error('Recurso no encontrado'), { status: 404 })
+}
+
+export const marcarVisto = async (usuario_id, recurso_id) => {
+  await pool.query(
+    `INSERT INTO sst.progreso_recursos (usuario_id, recurso_id)
+     VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+    [usuario_id, recurso_id],
+  )
+}
+
+export const getMiProgreso = async (capacitacion_id, usuario_id) => {
+  const { rows } = await pool.query(
+    `SELECT pr.recurso_id
+     FROM sst.progreso_recursos pr
+     JOIN sst.archivos_capacitacion ac ON ac.id = pr.recurso_id
+     WHERE ac.capacitacion_id = $1 AND pr.usuario_id = $2`,
+    [capacitacion_id, usuario_id],
+  )
+  return rows.map(r => r.recurso_id)
 }

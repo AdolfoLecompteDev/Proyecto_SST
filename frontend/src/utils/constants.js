@@ -15,8 +15,6 @@ export const ROUTES = {
   EVALUACIONES: '/evaluaciones',
   CERTIFICADOS: '/certificados',
   SEGUIMIENTO: '/seguimiento',
-  CONSULTAS: '/consultas',
-  CONSULTAS_ANTECEDENTES: '/consultas/antecedentes',
   NOTIFICACIONES: '/notificaciones',
   PERFIL: '/perfil',
   CONFIGURACION: '/configuracion',

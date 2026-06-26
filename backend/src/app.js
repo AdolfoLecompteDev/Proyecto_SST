@@ -7,7 +7,6 @@ import capacitacionesRoutes from './modules/capacitaciones/capacitaciones.routes
 import evaluacionesRoutes from './modules/evaluaciones/evaluaciones.routes.js'
 import certificadosRoutes from './modules/certificados/certificados.routes.js'
 import seguimientoRoutes from './modules/seguimiento/seguimiento.routes.js'
-import consultasRoutes from './modules/consultas/consultas.routes.js'
 import dashboardRoutes from './modules/dashboard/dashboard.routes.js'
 import auditoriaRoutes from './modules/auditoria/auditoria.routes.js'
 import notificacionesRoutes from './modules/notificaciones/notificaciones.routes.js'
@@ -53,7 +52,6 @@ app.use('/api/capacitaciones', capacitacionesRoutes)
 app.use('/api/evaluaciones', evaluacionesRoutes)
 app.use('/api/certificados', certificadosRoutes)
 app.use('/api/seguimiento', seguimientoRoutes)
-app.use('/api/consultas', consultasRoutes)
 app.use('/api/dashboard', dashboardRoutes)
 app.use('/api/auditoria', auditoriaRoutes)
 app.use('/api/notificaciones', notificacionesRoutes)

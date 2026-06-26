@@ -7,7 +7,7 @@ import {
   FlameIcon, HeartPulseIcon, WrenchIcon, BookOpenIcon, HardHatIcon,
   ShieldCheckIcon, ClockIcon, BellIcon, ChevronRightIcon,
 } from '../../components/ui/Icons.jsx'
-import { fetchDashboardStats } from '../../api/dashboardApi.js'
+import { fetchDashboardStats, fetchSinCertificar } from '../../api/dashboardApi.js'
 import { fetchMisCertificados } from '../../api/certificadosApi.js'
 import { fetchCategorias, fetchCapacitaciones } from '../../api/capacitacionesApi.js'
 import { fetchPerfilStats } from '../../api/authApi.js'
@@ -480,6 +480,68 @@ function DashboardFuncionario() {
   )
 }
 
+// ── Panel funcionarios sin certificar ────────────────────────────────────────
+function SinCertificarPanel({ count, navigate }) {
+  const [open, setOpen] = useState(false)
+  const [lista, setLista] = useState([])
+  const [loadingLista, setLoadingLista] = useState(false)
+
+  if (!count) return null
+
+  const handleToggle = async () => {
+    if (!open && lista.length === 0) {
+      setLoadingLista(true)
+      try {
+        const res = await fetchSinCertificar()
+        setLista(res.data.data ?? [])
+      } catch { /* silencioso */ } finally { setLoadingLista(false) }
+    }
+    setOpen(p => !p)
+  }
+
+  return (
+    <div className="mb-5 rounded-xl border border-blue-200 bg-blue-50 overflow-hidden">
+      <button onClick={handleToggle}
+        className="flex w-full items-center justify-between px-5 py-4 text-left hover:bg-blue-100/60 transition-colors">
+        <div className="flex items-center gap-3">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100">
+            <UsersIcon size={15} className="text-blue-600" />
+          </span>
+          <div>
+            <p className="text-body-sm font-semibold text-blue-800">
+              {count} funcionario{count > 1 ? 's' : ''} sin ningún certificado
+            </p>
+            <p className="text-label-sm text-blue-600">No han completado ningún módulo de capacitación</p>
+          </div>
+        </div>
+        <ChevronRightIcon size={16} className={`text-blue-400 transition-transform ${open ? 'rotate-90' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="border-t border-blue-200 divide-y divide-blue-100">
+          {loadingLista ? (
+            <div className="px-5 py-4">
+              {[1,2,3].map(i => <div key={i} className="mb-2 h-8 animate-pulse rounded bg-blue-100" />)}
+            </div>
+          ) : lista.map(u => (
+            <div key={u.id} className="flex items-center justify-between px-5 py-3">
+              <div>
+                <p className="text-body-sm font-medium text-blue-900">{u.nombre}</p>
+                <p className="text-label-sm text-blue-500">{u.email}{u.documento ? ` · CC ${u.documento}` : ''}</p>
+              </div>
+              <button
+                onClick={() => navigate('/seguimiento')}
+                className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-label-sm font-semibold text-white hover:bg-blue-700">
+                Ver seguimiento
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Dashboard Admin ───────────────────────────────────────────────────────────
 function DashboardAdmin() {
   const [data, setData] = useState(null)
@@ -530,6 +592,9 @@ function DashboardAdmin() {
 
       {/* Alertas */}
       {data?.alertas && <AlertBanner alertas={data.alertas} loading={loading} navigate={navigate} />}
+
+      {/* Panel sin certificar */}
+      <SinCertificarPanel count={data?.alertas?.funcionarios_sin_cert ?? 0} navigate={navigate} />
 
       {/* Compliance hero + KPIs */}
       <div className="mb-5 grid gap-4 lg:grid-cols-[auto_1fr_1fr_1fr]">

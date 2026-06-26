@@ -2,17 +2,16 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth.js'
 import { ROUTES } from '../../utils/constants.js'
 import {
-  ShieldIcon, GridIcon, GraduationCapIcon, ShieldCheckIcon,
-  CertificateIcon, BarChartIcon, UsersIcon, LogOutIcon, PlusIcon, BellIcon,
+  ShieldIcon, GridIcon, GraduationCapIcon,
+  CertificateIcon, BarChartIcon, UsersIcon, LogOutIcon, BellIcon,
 } from '../ui/Icons.jsx'
 
 const NAV_ITEMS = [
-  { label: 'Dashboard',      to: ROUTES.DASHBOARD,             icon: GridIcon,         end: true,  adminOnly: false },
-  { label: 'Capacitaciones', to: ROUTES.CAPACITACIONES,        icon: GraduationCapIcon,end: false, adminOnly: false },
-  { label: 'Verificación',   to: ROUTES.CONSULTAS_ANTECEDENTES,icon: ShieldCheckIcon,  end: false, adminOnly: true  },
-  { label: 'Certificados',   to: ROUTES.CERTIFICADOS,          icon: CertificateIcon,  end: false, adminOnly: false },
-  { label: 'Reportes',       to: ROUTES.SEGUIMIENTO,           icon: BarChartIcon,     end: false, adminOnly: true  },
-  { label: 'Usuarios',       to: ROUTES.USUARIOS,              icon: UsersIcon,        end: false, adminOnly: true  },
+  { label: 'Dashboard',      to: ROUTES.DASHBOARD,      icon: GridIcon,         end: true,  adminOnly: false },
+  { label: 'Capacitaciones', to: ROUTES.CAPACITACIONES, icon: GraduationCapIcon,end: false, adminOnly: false },
+  { label: 'Certificados',   to: ROUTES.CERTIFICADOS,   icon: CertificateIcon,  end: false, adminOnly: false },
+  { label: 'Reportes',       to: ROUTES.SEGUIMIENTO,    icon: BarChartIcon,     end: false, adminOnly: true  },
+  { label: 'Usuarios',       to: ROUTES.USUARIOS,       icon: UsersIcon,        end: false, adminOnly: true  },
 ]
 
 export default function Sidebar() {
@@ -40,25 +39,15 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Quick action — diferente por rol */}
+      {/* Quick action */}
       <div className="px-4 pb-4">
-        {esAdmin ? (
-          <button
-            onClick={() => navigate(ROUTES.CONSULTAS_ANTECEDENTES)}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-body-sm font-semibold text-on-primary transition-opacity hover:opacity-85"
-          >
-            <PlusIcon size={16} />
-            Nueva Verificación
-          </button>
-        ) : (
-          <button
-            onClick={() => navigate(ROUTES.NOTIFICACIONES)}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-body-sm font-semibold text-on-primary transition-opacity hover:opacity-85"
-          >
-            <BellIcon size={16} />
-            Notificaciones
-          </button>
-        )}
+        <button
+          onClick={() => navigate(ROUTES.NOTIFICACIONES)}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-body-sm font-semibold text-on-primary transition-opacity hover:opacity-85"
+        >
+          <BellIcon size={16} />
+          Notificaciones
+        </button>
       </div>
 
       {/* Nav */}

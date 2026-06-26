@@ -2,56 +2,126 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PageWrapper from '../../components/layout/PageWrapper.jsx'
 import {
-  FileTextIcon, RefreshIcon, PlusIcon,
+  FileTextIcon, RefreshIcon, PlusIcon, ClipboardIcon, CertificateIcon,
   FlameIcon, HeartPulseIcon, WrenchIcon, BookOpenIcon, HardHatIcon,
-  ZapIcon, GraduationCapIcon, ShieldIcon,
+  GraduationCapIcon, ClockIcon, AlertTriangleIcon,
 } from '../../components/ui/Icons.jsx'
 import { fetchCapacitaciones, fetchCategorias } from '../../api/capacitacionesApi.js'
 import { useAuth } from '../../hooks/useAuth.js'
 
-// Category → icon + gradient
 const catConfig = {
-  'Emergencias y Evacuación': {
-    Icon: FlameIcon,
-    gradient: 'from-orange-500 to-red-500',
-    light: 'bg-orange-50',
-    text: 'text-orange-600',
-  },
-  'Salud Ocupacional': {
-    Icon: HeartPulseIcon,
-    gradient: 'from-pink-500 to-rose-500',
-    light: 'bg-pink-50',
-    text: 'text-pink-600',
-  },
-  'Manejo de Equipos': {
-    Icon: WrenchIcon,
-    gradient: 'from-slate-500 to-gray-600',
-    light: 'bg-slate-50',
-    text: 'text-slate-600',
-  },
-  'Normatividad SST': {
-    Icon: BookOpenIcon,
-    gradient: 'from-violet-500 to-purple-600',
-    light: 'bg-violet-50',
-    text: 'text-violet-600',
-  },
-  'Seguridad en el Trabajo': {
-    Icon: HardHatIcon,
-    gradient: 'from-amber-400 to-yellow-500',
-    light: 'bg-amber-50',
-    text: 'text-amber-600',
-  },
+  'Emergencias y Evacuación':  { Icon: FlameIcon,      color: '#ea580c' },
+  'Salud Ocupacional':         { Icon: HeartPulseIcon,  color: '#db2777' },
+  'Manejo de Equipos':         { Icon: WrenchIcon,      color: '#475569' },
+  'Normatividad SST':          { Icon: BookOpenIcon,    color: '#7c3aed' },
+  'Seguridad en el Trabajo':   { Icon: HardHatIcon,     color: '#d97706' },
+}
+const defaultCat = { Icon: GraduationCapIcon, color: '#0d9488' }
+
+function getCat(categoria) {
+  return catConfig[categoria] || defaultCat
 }
 
-const defaultConfig = {
-  Icon: GraduationCapIcon,
-  gradient: 'from-teal-500 to-emerald-600',
-  light: 'bg-teal-50',
-  text: 'text-teal-600',
+function Stat({ Icon, value, label }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+      <Icon size={13} style={{ color: 'var(--color-on-surface-variant)', flexShrink: 0 }} />
+      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-on-surface)' }}>{value}</span>
+      <span style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>{label}</span>
+    </div>
+  )
 }
 
-function getConfig(categoria) {
-  return catConfig[categoria] || defaultConfig
+function CapacitacionCard({ curso, onClick }) {
+  const { Icon, color } = getCat(curso.categoria)
+  const isVencido = curso.fecha_vigencia && new Date(curso.fecha_vigencia) < new Date()
+  const diasRestantes = curso.fecha_vigencia
+    ? Math.ceil((new Date(curso.fecha_vigencia) - new Date()) / 86400000)
+    : null
+  const proxVencer = !isVencido && diasRestantes !== null && diasRestantes <= 30
+
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        background: '#fff', borderRadius: 12, cursor: 'pointer',
+        border: '1px solid var(--color-outline-variant)',
+        borderLeft: `4px solid ${color}`,
+        display: 'flex', flexDirection: 'column',
+        boxShadow: '0 1px 3px rgba(0,0,0,.06)',
+        transition: 'box-shadow .15s, transform .15s',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,.1)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,.06)'; e.currentTarget.style.transform = 'none' }}
+    >
+      <div style={{ padding: '18px 20px', flex: 1 }}>
+        {/* Categoría + badges */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Icon size={14} style={{ color, flexShrink: 0 }} />
+            <span style={{ fontSize: 11, fontWeight: 700, color, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              {curso.categoria || 'General'}
+            </span>
+          </div>
+          {!curso.estado && (
+            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-on-surface-variant)', background: 'var(--color-surface-container-high)', borderRadius: 4, padding: '2px 6px' }}>
+              INACTIVO
+            </span>
+          )}
+          {isVencido && curso.estado && (
+            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-error)', background: 'var(--color-error-container)', borderRadius: 4, padding: '2px 6px' }}>
+              VENCIDO
+            </span>
+          )}
+          {proxVencer && curso.estado && (
+            <span style={{ fontSize: 10, fontWeight: 700, color: '#92400e', background: '#fef3c7', borderRadius: 4, padding: '2px 6px' }}>
+              {diasRestantes}d restantes
+            </span>
+          )}
+        </div>
+
+        {/* Título */}
+        <h3 style={{ margin: '0 0 6px', fontSize: 15, fontWeight: 700, color: 'var(--color-on-surface)', lineHeight: 1.35 }}>
+          {curso.titulo}
+        </h3>
+
+        {/* Descripción */}
+        <p style={{
+          margin: 0, fontSize: 13, color: 'var(--color-on-surface-variant)', lineHeight: 1.5,
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+          minHeight: 39,
+        }}>
+          {curso.descripcion || 'Sin descripción'}
+        </p>
+      </div>
+
+      {/* Stats + fecha */}
+      <div style={{
+        padding: '12px 20px',
+        borderTop: '1px solid var(--color-outline-variant)',
+        display: 'flex', flexDirection: 'column', gap: 8,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <Stat Icon={FileTextIcon}  value={curso.num_recursos      ?? 0} label="recursos" />
+          <Stat Icon={ClipboardIcon} value={curso.num_evaluaciones  ?? 0} label="evaluaciones" />
+          <Stat Icon={CertificateIcon} value={curso.num_certificados ?? 0} label="certificados" />
+        </div>
+
+        {curso.fecha_vigencia && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            {isVencido
+              ? <AlertTriangleIcon size={12} style={{ color: 'var(--color-error)' }} />
+              : <ClockIcon size={12} style={{ color: 'var(--color-on-surface-variant)' }} />
+            }
+            <span style={{ fontSize: 12, color: isVencido ? 'var(--color-error)' : 'var(--color-on-surface-variant)' }}>
+              {isVencido ? 'Expiró el ' : 'Hasta '}
+              {new Date(curso.fecha_vigencia).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
 
 export default function ListaCapacitaciones() {
@@ -111,40 +181,32 @@ export default function ListaCapacitaciones() {
 
       <div className="flex gap-6">
         {/* Sidebar filtros */}
-        <aside className="w-52 flex-shrink-0">
-          <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-5">
+        <aside className="w-48 flex-shrink-0">
+          <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
             <p className="mb-3 text-label-sm font-semibold uppercase tracking-wide text-on-surface-variant">
               Categorías
             </p>
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {loading
                 ? Array.from({ length: 5 }).map((_, i) => (
                     <div key={i} className="h-8 animate-pulse rounded-lg bg-surface-container-high" />
                   ))
                 : categorias.map((cat) => {
-                    const cfg = cat === 'Todos' ? null : getConfig(cat)
+                    const cfg = cat === 'Todos' ? null : getCat(cat)
                     const isActive = catActiva === cat
+                    const count = cat === 'Todos' ? cursos.length : cursos.filter((c) => c.categoria === cat).length
                     return (
-                      <button
-                        key={cat}
-                        onClick={() => setCatActiva(cat)}
-                        className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-body-sm transition-colors ${
+                      <button key={cat} onClick={() => setCatActiva(cat)}
+                        style={isActive && cfg ? { borderLeft: `3px solid ${cfg.color}` } : { borderLeft: '3px solid transparent' }}
+                        className={`flex w-full items-center gap-2 rounded-r-lg px-3 py-2 text-body-sm transition-colors ${
                           isActive
-                            ? 'bg-primary/10 font-semibold text-primary'
-                            : 'text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface'
+                            ? 'bg-surface-container font-semibold text-on-surface'
+                            : 'text-on-surface-variant hover:bg-surface-container-low'
                         }`}
                       >
-                        {cfg && (
-                          <span className={`flex h-5 w-5 items-center justify-center rounded ${isActive ? 'text-primary' : cfg.text}`}>
-                            <cfg.Icon size={14} />
-                          </span>
-                        )}
-                        <span className="truncate">{cat}</span>
-                        {!loading && (
-                          <span className="ml-auto text-label-sm text-on-surface-variant">
-                            {cat === 'Todos' ? cursos.length : cursos.filter((c) => c.categoria === cat).length}
-                          </span>
-                        )}
+                        {cfg && <cfg.Icon size={13} style={{ color: isActive ? cfg.color : undefined, flexShrink: 0 }} />}
+                        <span className="truncate flex-1 text-left">{cat}</span>
+                        <span className="text-label-sm text-on-surface-variant">{count}</span>
                       </button>
                     )
                   })
@@ -154,15 +216,15 @@ export default function ListaCapacitaciones() {
         </aside>
 
         {/* Cards grid */}
-        <div className="grid flex-1 auto-rows-max grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid flex-1 auto-rows-max grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {loading
             ? Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-72 animate-pulse rounded-xl bg-surface-container-high" />
+                <div key={i} style={{ height: 180 }} className="animate-pulse rounded-xl bg-surface-container-high" />
               ))
             : filtrados.length === 0
               ? (
                   <div className="col-span-full flex flex-col items-center justify-center py-20 text-on-surface-variant">
-                    <FileTextIcon size={40} className="mb-3 opacity-40" />
+                    <FileTextIcon size={36} className="mb-3 opacity-30" />
                     <p className="text-body-md">Sin capacitaciones disponibles</p>
                     {catActiva !== 'Todos' && (
                       <button onClick={() => setCatActiva('Todos')} className="mt-2 text-body-sm text-primary hover:underline">
@@ -171,70 +233,13 @@ export default function ListaCapacitaciones() {
                     )}
                   </div>
                 )
-              : filtrados.map((curso) => {
-                  const cfg = getConfig(curso.categoria)
-                  const { Icon } = cfg
-                  const isVencido = curso.fecha_vigencia && new Date(curso.fecha_vigencia) < new Date()
-
-                  return (
-                    <div
-                      key={curso.id}
-                      className="group flex flex-col overflow-hidden rounded-xl border border-outline-variant bg-white shadow-sm transition-shadow hover:shadow-md"
-                    >
-                      {/* Banner con gradiente + icono */}
-                      <div className={`relative flex h-40 items-center justify-center bg-gradient-to-br ${cfg.gradient}`}>
-                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
-                          <Icon size={32} className="text-white" />
-                        </div>
-
-                        {/* Categoria badge */}
-                        {curso.categoria && (
-                          <span className="absolute right-3 top-3 rounded-md bg-white/90 px-2 py-0.5 text-label-sm font-bold text-on-surface shadow-sm">
-                            {curso.categoria.split(' ').slice(0, 2).join(' ')}
-                          </span>
-                        )}
-
-                        {/* Estado badge */}
-                        {!curso.estado && (
-                          <span className="absolute left-3 top-3 rounded-md bg-black/60 px-2 py-0.5 text-label-sm font-bold text-white">
-                            Inactivo
-                          </span>
-                        )}
-                        {isVencido && curso.estado && (
-                          <span className="absolute left-3 top-3 rounded-md bg-error/90 px-2 py-0.5 text-label-sm font-bold text-white">
-                            Vencido
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex flex-1 flex-col p-5">
-                        <h3 className="text-body-md font-semibold text-on-surface leading-snug">
-                          {curso.titulo}
-                        </h3>
-
-                        {curso.descripcion && (
-                          <p className="mt-1.5 line-clamp-2 text-body-sm text-on-surface-variant">
-                            {curso.descripcion}
-                          </p>
-                        )}
-
-                        {curso.fecha_vigencia && (
-                          <p className={`mt-2 text-label-sm ${isVencido ? 'text-error' : 'text-on-surface-variant'}`}>
-                            Vigente hasta: {new Date(curso.fecha_vigencia).toLocaleDateString('es-CO')}
-                          </p>
-                        )}
-
-                        <button
-                          onClick={() => navigate(`/capacitaciones/${curso.id}`)}
-                          className={`mt-auto pt-4 w-full rounded-lg py-2.5 text-body-sm font-semibold text-white transition-opacity hover:opacity-85 bg-gradient-to-r ${cfg.gradient}`}
-                        >
-                          Ver Capacitación
-                        </button>
-                      </div>
-                    </div>
-                  )
-                })
+              : filtrados.map((curso) => (
+                  <CapacitacionCard
+                    key={curso.id}
+                    curso={curso}
+                    onClick={() => navigate(`/capacitaciones/${curso.id}`)}
+                  />
+                ))
           }
         </div>
       </div>

@@ -13,8 +13,6 @@ import ResultadoEvaluacion from '../pages/evaluaciones/ResultadoEvaluacion.jsx'
 import GestionQuiz from '../pages/capacitaciones/GestionQuiz.jsx'
 import MisCertificados from '../pages/certificados/MisCertificados.jsx'
 import ReporteSeguimiento from '../pages/seguimiento/ReporteSeguimiento.jsx'
-import HistorialConsultas from '../pages/consultas/HistorialConsultas.jsx'
-import ConsultaAntecedentesMiembros from '../pages/consultas/ConsultaAntecedentesMiembros.jsx'
 import Notificaciones from '../pages/notificaciones/Notificaciones.jsx'
 import PerfilUsuario from '../pages/perfil/PerfilUsuario.jsx'
 import Configuracion from '../pages/configuracion/Configuracion.jsx'
@@ -50,11 +48,10 @@ export default function AppRouter() {
         <Route element={<ProtectedRoute allowedRoles={ADMIN_ROLES} />}>
           <Route path={ROUTES.USUARIOS}           element={<ListaUsuarios />} />
           <Route path={ROUTES.USUARIOS_NUEVO}     element={<FormUsuario />} />
-          <Route path={ROUTES.CAPACITACIONES_NUEVA} element={<FormCapacitacion />} />
-          <Route path="/capacitaciones/:id/quiz"  element={<GestionQuiz />} />
+          <Route path={ROUTES.CAPACITACIONES_NUEVA}    element={<FormCapacitacion />} />
+          <Route path="/capacitaciones/:id/editar"   element={<FormCapacitacion />} />
+          <Route path="/capacitaciones/:id/quiz"     element={<GestionQuiz />} />
           <Route path={ROUTES.SEGUIMIENTO}        element={<ReporteSeguimiento />} />
-          <Route path={ROUTES.CONSULTAS}          element={<HistorialConsultas />} />
-          <Route path={ROUTES.CONSULTAS_ANTECEDENTES} element={<ConsultaAntecedentesMiembros />} />
         </Route>
 
         <Route path="*" element={<Navigate to={ROUTES.DASHBOARD} replace />} />

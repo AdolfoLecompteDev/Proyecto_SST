@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { fetchConfig, saveConfig } from '../../api/configApi.js'
+import { fetchConfig, saveConfig, fetchPublicConfig, saveSistemaConfig } from '../../api/configApi.js'
 import PageWrapper from '../../components/layout/PageWrapper.jsx'
 import { useAuth } from '../../hooks/useAuth.js'
 import { BellIcon, ShieldCheckIcon, SettingsIcon, UsersIcon } from '../../components/ui/Icons.jsx'
+import { applyTheme } from '../../utils/theme.js'
 
 function Toggle({ checked, onChange }) {
   return (
@@ -10,6 +11,28 @@ function Toggle({ checked, onChange }) {
       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${checked ? 'bg-primary' : 'bg-surface-container-high'}`}>
       <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
     </button>
+  )
+}
+
+function ColorPicker({ label, desc, value, onChange }) {
+  return (
+    <div className="flex items-center justify-between rounded-lg border border-outline-variant p-4">
+      <div>
+        <p className="text-body-sm font-medium text-on-surface">{label}</p>
+        {desc && <p className="text-label-sm text-on-surface-variant">{desc}</p>}
+      </div>
+      <div className="flex items-center gap-3">
+        <div className="h-8 w-8 rounded-md border border-outline-variant" style={{ background: value }} />
+        <input
+          type="color"
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          className="h-8 w-8 cursor-pointer rounded border border-outline p-0.5"
+          title={value}
+        />
+        <span className="text-label-sm text-on-surface-variant font-mono">{value}</span>
+      </div>
+    </div>
   )
 }
 
@@ -25,6 +48,8 @@ export default function Configuracion() {
   const esAdmin = user?.rol === 'ADMIN' || user?.rol === 'SUPER_USUARIO'
 
   const [tab, setTab] = useState('notificaciones')
+  const [saving, setSaving] = useState(false)
+
   const [notif, setNotif] = useState({
     emailCertificados: true,
     emailVencimientos: true,
@@ -46,6 +71,10 @@ export default function Configuracion() {
     vigenciaCertDias: '365',
     modoMantenimiento: false,
   })
+  const [tema, setTema] = useState({
+    color_primario: '#000000',
+    color_secundario: '#006c49',
+  })
 
   const setN = (k) => (v) => setNotif((p) => ({ ...p, [k]: v }))
   const setS = (k) => (v) => setSeg((p) => ({ ...p, [k]: v }))
@@ -58,17 +87,42 @@ export default function Configuracion() {
       if (conf.seg) setSeg((p) => ({ ...p, ...conf.seg }))
       if (conf.sistema && esAdmin) setSistema((p) => ({ ...p, ...conf.sistema }))
     }).catch(console.error)
+
+    if (esAdmin) {
+      fetchPublicConfig().then(json => {
+        const d = json?.data || {}
+        if (d.color_primario || d.color_secundario) {
+          setTema(p => ({
+            color_primario: d.color_primario || p.color_primario,
+            color_secundario: d.color_secundario || p.color_secundario,
+          }))
+        }
+        if (d.nombre_empresa) setSistema(p => ({ ...p, nombreEmpresa: d.nombre_empresa }))
+      }).catch(console.error)
+    }
   }, [esAdmin])
 
   const handleSave = async () => {
+    setSaving(true)
     try {
       const payload = { notif, seg }
       if (esAdmin) payload.sistema = sistema
       await saveConfig(payload)
+
+      if (esAdmin) {
+        await saveSistemaConfig({
+          nombre_empresa: sistema.nombreEmpresa,
+          color_primario: tema.color_primario,
+          color_secundario: tema.color_secundario,
+        })
+        applyTheme(tema)
+      }
+
       alert('Configuración guardada exitosamente')
-    } catch (err) {
+    } catch {
       alert('Error guardando configuración')
-      console.error(err)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -176,6 +230,8 @@ export default function Configuracion() {
           {tab === 'sistema' && esAdmin && (
             <div className="space-y-6">
               <h3 className="text-body-lg font-semibold text-on-surface">Configuración del Sistema</h3>
+
+              {/* Datos generales */}
               <div className="grid grid-cols-2 gap-4">
                 {[
                   { key: 'nombreEmpresa', label: 'Nombre de la empresa', full: true },
@@ -190,6 +246,43 @@ export default function Configuracion() {
                   </div>
                 ))}
               </div>
+
+              <hr className="border-outline-variant" />
+
+              {/* Colores de la plataforma */}
+              <div>
+                <p className="mb-1 text-body-sm font-semibold text-on-surface">Colores de la plataforma</p>
+                <p className="mb-4 text-label-sm text-on-surface-variant">Los cambios se aplican en tiempo real al guardar.</p>
+                <div className="space-y-3">
+                  <ColorPicker
+                    label="Color primario"
+                    desc="Botones, íconos activos, acentos principales"
+                    value={tema.color_primario}
+                    onChange={v => setTema(p => ({ ...p, color_primario: v }))}
+                  />
+                  <ColorPicker
+                    label="Color secundario"
+                    desc="Badges de aprobado, estados de éxito, acciones secundarias"
+                    value={tema.color_secundario}
+                    onChange={v => setTema(p => ({ ...p, color_secundario: v }))}
+                  />
+                </div>
+                <div className="mt-4 rounded-lg border border-outline-variant p-4 flex gap-4 items-center">
+                  <span className="text-label-sm text-on-surface-variant">Vista previa:</span>
+                  <button className="rounded-lg px-4 py-2 text-body-sm font-semibold text-white" style={{ background: tema.color_primario }}>
+                    Botón primario
+                  </button>
+                  <button className="rounded-lg px-4 py-2 text-body-sm font-semibold text-white" style={{ background: tema.color_secundario }}>
+                    Botón secundario
+                  </button>
+                  <span className="rounded-full px-3 py-1 text-label-sm font-semibold text-white" style={{ background: tema.color_secundario }}>
+                    Aprobado
+                  </span>
+                </div>
+              </div>
+
+              <hr className="border-outline-variant" />
+
               <div className="flex items-center justify-between rounded-lg border border-error-container bg-error-container/20 p-4">
                 <div>
                   <p className="text-body-sm font-medium text-on-surface">Modo mantenimiento</p>
@@ -222,8 +315,9 @@ export default function Configuracion() {
 
           {/* Save button */}
           <div className="mt-6 flex justify-end">
-            <button onClick={handleSave} className="rounded-lg bg-primary px-6 py-2.5 text-body-sm font-semibold text-on-primary hover:opacity-85">
-              Guardar cambios
+            <button onClick={handleSave} disabled={saving}
+              className="rounded-lg bg-primary px-6 py-2.5 text-body-sm font-semibold text-on-primary hover:opacity-85 disabled:opacity-50">
+              {saving ? 'Guardando...' : 'Guardar cambios'}
             </button>
           </div>
         </div>

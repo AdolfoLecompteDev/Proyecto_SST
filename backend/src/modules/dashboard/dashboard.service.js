@@ -88,3 +88,18 @@ export const getStats = async () => {
     actividad_reciente: actividadReciente,
   }
 }
+
+export const getSinCertificar = async () => {
+  const { rows } = await pool.query(`
+    SELECT u.id, u.nombre || ' ' || u.apellido AS nombre, u.email, u.documento,
+           COUNT(cert.id)::int AS certificados
+    FROM sst.usuarios u
+    JOIN sst.roles r ON r.id = u.rol_id
+    LEFT JOIN sst.certificados cert ON cert.usuario_id = u.id
+    WHERE r.nombre = 'FUNCIONARIO' AND u.estado = true
+    GROUP BY u.id, u.nombre, u.apellido, u.email, u.documento
+    HAVING COUNT(cert.id) = 0
+    ORDER BY u.nombre
+  `)
+  return rows
+}

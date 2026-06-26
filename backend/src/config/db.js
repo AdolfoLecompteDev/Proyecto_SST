@@ -6,9 +6,8 @@ dotenv.config()
 const config = process.env.DATABASE_URL
   ? {
       connectionString: process.env.DATABASE_URL,
-      ssl: {
-        rejectUnauthorized: false
-      }
+      ssl: { rejectUnauthorized: false },
+      options: '-c search_path=sst',
     }
   : {
       host: process.env.DB_HOST,
@@ -16,7 +15,8 @@ const config = process.env.DATABASE_URL
       database: process.env.DB_NAME,
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
-    };
+      options: '-c search_path=sst',
+    }
 
 const pool = new pg.Pool(config)
 
