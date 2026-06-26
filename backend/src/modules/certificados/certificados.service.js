@@ -54,7 +54,7 @@ export const getAll = async ({ search = '', estado = null } = {}) => {
 export const getById = async (id) => {
   const { rows } = await pool.query(
     `SELECT cert.*, u.nombre || ' ' || u.apellido AS empleado, u.documento,
-            c.titulo AS capacitacion
+            c.titulo AS capacitacion, c.fecha_vigencia
      FROM sst.certificados cert
      JOIN sst.usuarios u ON u.id = cert.usuario_id
      JOIN sst.capacitaciones c ON c.id = cert.capacitacion_id
