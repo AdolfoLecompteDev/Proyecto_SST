@@ -115,7 +115,7 @@ export default function Configuracion() {
           color_primario: tema.color_primario,
           color_secundario: tema.color_secundario,
         })
-        applyTheme(tema)
+        applyTheme({ ...tema, nombre_empresa: sistema.nombreEmpresa })
       }
 
       alert('Configuración guardada exitosamente')

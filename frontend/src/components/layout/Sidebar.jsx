@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth.js'
+import { useEmpresa } from '../../hooks/useEmpresa.js'
 import { ROUTES } from '../../utils/constants.js'
 import {
   ShieldIcon, GridIcon, GraduationCapIcon,
@@ -17,6 +18,7 @@ const NAV_ITEMS = [
 export default function Sidebar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const empresa = useEmpresa()
   const esAdmin = user?.rol === 'ADMIN' || user?.rol === 'SUPER_USUARIO'
 
   const handleLogout = () => {
@@ -34,7 +36,7 @@ export default function Sidebar() {
           <ShieldIcon size={18} className="text-on-primary" />
         </div>
         <div>
-          <p className="text-body-sm font-semibold leading-tight text-on-surface">SST Enterprise</p>
+          <p className="text-body-sm font-semibold leading-tight text-on-surface">{empresa}</p>
           <p className="text-label-sm text-on-surface-variant">Safety Management</p>
         </div>
       </div>
